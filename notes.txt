@@ -1,0 +1,13 @@
+MUD in discord
+
+I'm going to need to think about how to direct bot to specific users - store game data for each character in a database,
+then when bot receives a command check the user against the database. maybe have it whisper to each person?
+
+
+How to store game data in database??
+what exactly needs to be stored
+
+player locations
+player healths
+
+quest statuses
