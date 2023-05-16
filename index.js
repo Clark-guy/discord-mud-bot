@@ -52,4 +52,4 @@ client.on('messageCreate', (message) => {
 })
 
 // client.login logs the bot in and sets it up for use. You'll enter your token here.
-client.login("MTEwNzc1Mjg4MTQwODQ0NjQ3NA.GeJPMe.nV-7DUhzpOx6dLTQpVXJknsZzvd6K6ko9NC1iQ");
+client.login(process.env.DiscordToken);
