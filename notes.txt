@@ -1,8 +1,7 @@
 MUD in discord
 
-accidentally uploaded token- discord changed it thankfully
- - need to look into env variables. maybe just make the thing private on
- - github? not a strong solution though
+Accidentally uploaded token- then changed it. amazing how fast discord catches
+	that sort of thing.
 
 I'm going to need to think about how to direct bot to specific users - store game data for each character in a database,
 then when bot receives a command check the user against the database. maybe have it whisper to each person?

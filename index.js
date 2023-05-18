@@ -1,5 +1,6 @@
+//const { Player } = require('./models/Player.js');
 const { Client, GatewayIntentBits } = require('discord.js')
-
+const mongoose = require('mongoose');
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -11,7 +12,7 @@ const client = new Client({
 
 
 //globals
-var botEnabled = true;
+var botEnabled = false;
 
 
 
@@ -25,7 +26,7 @@ function handleInput(message){
     console.log("disabling");
 	botEnabled = false;
   }
-  else{
+  else if(content.startsWith("!help")){
     message.reply({content: "usage: \n\nCOMMANDS\n!exit - quit MUD\n!enableBot - enable MUD\n"});
   }
   //help fallthru
@@ -34,7 +35,6 @@ function handleInput(message){
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
-
 })
 
 // Register an event to handle incoming messages
@@ -44,12 +44,27 @@ client.on('messageCreate', (message) => {
   }
   else if (message.content == "!enableBot" && message.author.bot == false){
     botEnabled = true;
+    message.channel.send("Bot enabled");
   }
-  // Check if the message starts with '!hello' and respond with 'world!' if it does.
-  //if(message.content.startsWith("!hello")) {
-  //  message.reply({content: "world!"})
-  //}
 })
 
 // client.login logs the bot in and sets it up for use. You'll enter your token here.
 client.login(process.env.DiscordToken);
+
+
+mongoose.connect(process.env.MongoDBToken);
+
+
+const Player = mongoose.model("Player", {
+  name: String,
+  inventory: [String],
+  won: Number
+});
+
+const guy = new Player({
+  name: "Mario Guy",
+  inventory: ["spoon", "rock"],
+  won: 100
+});
+
+guy.save().then(() => console.log(Player.findOne({})));

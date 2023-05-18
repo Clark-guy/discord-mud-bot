@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "discord.js": "^14.11.0",
-    "mongodb": "^5.5.0"
+    "mongodb": "^5.5.0",
+    "mongoose": "^7.1.1"
   },
   "name": "discordbot",
   "version": "1.0.0",
