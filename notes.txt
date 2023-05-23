@@ -14,3 +14,40 @@ player locations
 player healths
 
 quest statuses
+
+
+
+
+
+
+
+
+
+how will turns work?
+
+how will the database store info from multiple games???
+
+Make the database store a single "game" object
+make the game object only reachable by a certain party leader - that
+person initiates game, and can load it back up
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
