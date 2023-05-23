@@ -124,10 +124,10 @@ client.on('messageCreate', (message) => {
     message.channel.send("Bot enabled");
 	var query = Party.findOne({'guild': message.guildId});
 	query.select("*");
-	query.exec(function(err, party){
+	query.exec().then({
 		console.log('%s', party.id);
 	})
-	if(!Party.findOne({'guild': message.guildId})){
+	if(!Party.findOne()){
 		message.channel.send("Server does not have a party initialized. initialize now?");
 		conversationContext = "createParty";
 	}
