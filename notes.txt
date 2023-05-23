@@ -32,7 +32,8 @@ make the game object only reachable by a certain party leader - that
 person initiates game, and can load it back up
 
 
-
+Creating characters - should be given the option to join or create a party.
+when creating a party - make a new party schema, add discord user id 
 
 
 
