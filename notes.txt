@@ -1,3 +1,7 @@
+Notes to self / Dev journal
+
+~Early Project~
+
 MUD in discord
 
 Accidentally uploaded token- then changed it. amazing how fast discord catches
@@ -16,12 +20,7 @@ player healths
 quest statuses
 
 
-
-
-
-
-
-
+~~~~~~~~~~~~~~
 
 how will turns work?
 
@@ -36,17 +35,47 @@ Creating characters - should be given the option to join or create a party.
 when creating a party - make a new party schema, add discord user id 
 
 
+~~~~~~~~~~~~~~~5/23/23
+
+Where I'm at now - the bot can read and write to database
+User is capable of creating a new party on the server, creating characters
+
+TODO now...
+ - make it so adding to the party works
+ - make it so I can print the party status to the player
+ - make it so removing from the party works
+
+questions..
+ - Should there be a "party level"? This might cause issue if I don't
+ 	lock in the party members early on. E.g. players in party level up to 10 or so,
+	then they drop out 3 out of 4 members and replace with little babies.
+	 - Maybe party level can be based on all party members' levels? so that
+	 	game scales appropriately, can switch players in or out (This seems
+		like a good idea to me)
+ - Need a main questline to start working on
+ - should add a perception check in any given area- say an area has 10 perception checks in it,
+ 	but player only succeeds at 1 or 2 at low level- incentivizes players to return to old
+	locations. Maybe when returning to an area where player perception level has increased
+	have bot say something like "You sense something has changed about this place... roll perception?"
 
 
+##Architecture of a Map nodes
 
+ - Map Nodes will indicate places like cities, paths, forests, etc. Some cities should maybe
+	even be split into multiple map nodes - west ardoigneou, for example
+ - Within a map node, there will be: Buildings, visible characters (e.g. people in a town square).
+ 	In each building there will be visible characters and invisible characters
 
-
-
-
-
-
-
-
+	Map Node (City of burgers)
+	 |
+	 |-Person (Meadow Soprano)
+	 |
+	 |-Building(Bar)
+	 |   |-Person(Dilby)
+	 |	 |-Person(Richard)
+	 |
+	 |-Building(store)
+	 	 |-Person(Shopkeep)
 
 
 

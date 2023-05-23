@@ -22,6 +22,10 @@ var playerResponse = 0; // value to hold a player response in case of multiple c
 var conversationContext = "";
 var registerSet = []; //This kind of seems like a terrible way to do this but let's get the ball rolling
 
+//in general - 0 is yes, 1 is no
+function yesNo(message){
+	return message.startsWith('y') || message.startsWith('0');
+}
 
 function handleResponse(message, options){
 	if(conversationContext == "newPlayerName"){
@@ -53,8 +57,22 @@ function handleResponse(message, options){
 			message.channel.send("please try again- answer multiple choice questions with the number of your choice, followed by a period. E.G. '2.'");
 		}
 	}
+	else if(conversationContext == "createParty"){
+		if(yesNo(message.content)){
+			new Party({
+				guild: message.guildId,
+				members: [],
+			}).save();
+			message.channel.send("Created new party");
+			registerSet = [];
+			conversationContext = ""
+		}
+		else{
+			message.channel.send("Not creating a new party");
+		}
+	}
 	else if(conversationContext == "addPlayer"){
-		if(message.content.includes("yes")){
+		if(yesNo(message.content)){
 			message.channel.send("added to party");
 		}
 		else{
@@ -62,19 +80,11 @@ function handleResponse(message, options){
 		}
 		conversationContext = "";
 	}
-
-	if(message.content.includes("yes")){
-		playerResponse
-	}
-	else if(message.content.includes("no")){
-		
-	}
 }
 
 
 function handleInput(message){
   content = message.content
-  
   if(conversationContext==""){
 	  if(content.includes("!exit")) {
 		console.log("disabling");
@@ -93,7 +103,14 @@ function handleInput(message){
 		message.channel.send("add player to this server's party?");
 	  }
 	  else if(content.startsWith("!help")){
-		message.reply({content: "usage: \n\nCOMMANDS\n!exit - quit MUD\n!enableBot - enable MUD\n" + 
+		message.reply({content: "Help\n\n" + 
+				"GETTING STARTED" +
+				"To begin, you'll want to make a party for your server first. Then,  " +
+				"create a player for each person playing, and add their players to the " +
+				"party. when all party members are ready, use the !newGame command to begin.\n" +
+				"\nBOT COMMANDS\n" + 
+				"!exit - quit MUD\n" + 
+				"!enableBot - enable MUD\n" + 
 				"!newPlayer - create a new player\n" +
 				"!addPlayer - add a new player to party\n" +
 				"!removePlayer - remove a player from party\n" +
@@ -124,13 +141,12 @@ client.on('messageCreate', (message) => {
     message.channel.send("Bot enabled");
 	var query = Party.findOne({'guild': message.guildId});
 	query.select("*");
-	query.exec().then({
-		console.log('%s', party.id);
+	query.exec().then(function (parties){
+		if(!parties){
+			message.channel.send("Server does not have a party initialized. initialize now?");
+			conversationContext = "createParty";
+		}
 	})
-	if(!Party.findOne()){
-		message.channel.send("Server does not have a party initialized. initialize now?");
-		conversationContext = "createParty";
-	}
   }
 })
 
