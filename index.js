@@ -48,15 +48,13 @@ function handleResponse(message, options){
 			else{
 				var outString = "";
 				for(var i=0;i<players.length;i++){
-					console.log(players[i].name);
+					//console.log(players[i].name);
 					outString+=i.toString()+". " + players[i].name+"\n";
 					registerSet.push(players[i]._id)
 				}
 				message.channel.send(outString);
 			}
 		});
-
-
 	}
 	if(conversationContext == "newPlayerName"){
 		//need to sanitize to prevent duplications of name from a single user
@@ -111,7 +109,7 @@ function handleResponse(message, options){
 					conversationContext = "createParty";
 				}
 				else{
-					console.log(message.author.id);
+					//console.log(message.author.id);
 					var pQuery = Player.find({'owner': message.author.id}, 'name');
 					pQuery.select("*");
 					pQuery.exec().then(function (players){
@@ -123,7 +121,7 @@ function handleResponse(message, options){
 						else{
 							var outString = "";
 							for(var i=0;i<players.length;i++){
-								console.log(players[i]._id);
+								//console.log(players[i]._id);
 								outString+=i.toString()+". " + players[i].name+"\n";
 								registerSet.push(players[i]._id.toString());
 							}
@@ -142,16 +140,19 @@ function handleResponse(message, options){
 	}
 	else if(conversationContext == "playerChosen"){
 		//query player given message.content paired with registerSet
-		message.content = multChoice(message.content);
-		console.log(registerSet[message.content]);
-		console.log(typeof(registerSet[message.content]));
+		var character = multChoice(message.content);
 		//query party given server, query player given ID, add players to server
 		//ALSO Need to grab the array from the party table and add player
-		var partyQuery = Party.findOne({'guild': message.guildId}, 'players').exec().then(function (parties){
-			var playerQuery = Player.findOne({'_id': message.content}).exec().then(function (playerToAdd){
-				console.log(parties.players)
-				parties.players.push(playerToAdd);
+		var playerQuery = Player.findOne({'_id': registerSet[character]}).exec().then(function (playerToAdd){
+			var partyQuery = Party.findOne({'guild': message.guildId}, 'members').exec().then(function (parties){
+				//console.log(playerToAdd);
+				//console.log(parties);
+				//console.log(parties.members);
+				//console.log(parties.players);
+				parties.members.push(playerToAdd);
+				parties.save();
 				//parties.members
+				
 			});
 		});
 	}
