@@ -117,3 +117,27 @@ brought from one server to another. That being said, maybe remove the idea of a
 mix and match between servers. 
 
 
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~5/24/23
+As noted by my earlier message - games and parties are sort of an issue here.
+
+I've added the bot to a second server, and it's getting very confused between serving
+both of them- for example, enabling it on one server enables it for both. I need to
+move the logic for enabling the bot into the database, so one server can have it
+enabled, while the other doesn't.
+
+Also, something has caused the entry of a null member in a party on the new server.
+This breaks shit, so I have to sort that out as well. Stronger architecture would help
+this move a little more smoothly- however, I lack the experience necessary to know how
+to do that. 
+
+TODO:
+ - lock conversation contexts to a certain user, so other members talking doesn't interrupt
+ 	it or alter the conversation. Basically, lock the bot to a user while in a conversation.
+
+ - Move bot enabling onto the database level, so that different servers can choose whether
+ 	or not it is enabled - there should be very strict operational boundaries between 
+	servers, for obvious reasons.
+
+ - Would be good to find out why a null player was entered.. 

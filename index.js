@@ -9,19 +9,31 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent
   ]
-})
+});
 
 
-//globals
+//////////////GLOBAL VARIABLES/////////////
 var botEnabled = false;
 var currentTurn; //variable to hold whose turn it is to speak to the bot
 //TODO maybe i can merge awaiting response and conversation context into one variable?
-var awaitingResponse = false; //bool to determine whether the bot is waiting for a response
-var responseOptions = []; //list of options j
-var playerResponse = 0; // value to hold a player response in case of multiple choice
-var conversationContext = "";
-var registerSet = []; //This kind of seems like a terrible way to do this but let's get the ball rolling
+//var awaitingResponse = false; //bool to determine whether the bot is waiting for a response // DELETE THIS LINE
+//var responseOptions = []; //list of options //PROBABLY DELETE THIS TOO
+//var playerResponse = 0; // value to hold a player response in case of multiple choice //DELETE THIS PROBABLY TOO
 
+//Conversation Context Var
+//Used to control the context of the conversation, particularly for progressing conversation with
+//bot. necessary for basic functionality.
+var conversationContext = ""; 
+
+//Register Set Var
+//This kind of seems like a terrible way to do this but let's get the ball rolling.
+//Used to store input from player when multiple pieces of information must be used at a time.
+//example, character creation. push name, then class, then any other necessary vars so
+//that the registers are consolidated when being used. Must be cleared after use
+var registerSet = []; 
+
+
+//////////////UTILITY FUNCTIONS/////////////
 //in general - 0 is yes, 1 is no
 function yesNo(message){
 	return message.startsWith('y') || message.startsWith('0');
@@ -34,6 +46,8 @@ function multChoice(choice){
 	return choice-=1;
 }
 
+
+//////////////EVENT HANDLING//////////////////
 function handleResponse(message, options){
 
 	if(conversationContext == "choosePlayer"){
@@ -93,11 +107,11 @@ function handleResponse(message, options){
 			}).save();
 			message.channel.send("Created new party");
 			registerSet = [];
-			conversationContext = ""
 		}
 		else{
 			message.channel.send("Not creating a new party");
 		}
+		conversationContext = "";
 	}
 	else if(conversationContext == "addPlayer"){
 		if(yesNo(message.content)){
@@ -139,18 +153,15 @@ function handleResponse(message, options){
 		conversationContext = "";
 	}
 	else if(conversationContext == "playerChosen"){
-		//query player given message.content paired with registerSet
 		var character = multChoice(message.content);
-		//query party given server, query player given ID, add players to server
 		//ALSO Need to grab the array from the party table and add player
 		var playerQuery = Player.findOne({'_id': registerSet[character]}).exec().then(function (playerToAdd){
 			var partyQuery = Party.findOne({'guild': message.guildId}, 'members').exec().then(function (parties){
-				//console.log(playerToAdd);
-				//console.log(parties);
-				//console.log(parties.members);
-				//console.log(parties.players);
 				parties.members.push(playerToAdd);
 				parties.save();
+				message.channel.send(`Added ${playerToAdd.name} to party.`);
+				registerSet = [];
+				conversationContext = "";
 				//parties.members
 				
 			});
@@ -167,7 +178,7 @@ function handleInput(message){
 		botEnabled = false;
 	  }
 	  else if(content.includes("!partyStatus")) {
-		var query = Party.findOne({'guild': message.guildId});
+		var query = Party.findOne({'guild': message.guildId}, 'members');
 		query.select("*");
 		query.exec().then(function (parties){
 			if(!parties){
@@ -176,6 +187,31 @@ function handleInput(message){
 			}
 			else{
 				message.channel.send("Party information:");
+				var players = Player.find({
+								_id: {
+									$in: parties.members
+									}
+								}).then(function(queryPlayers){
+									if(!queryPlayers){
+										message.channel.send("No players owned by the current user. Creating new one..");
+										message.channel.send("Enter a name for your character");
+										conversationContext = "newPlayerName";
+									}
+									else{
+										//console.log(queryPlayers);
+										var outString = "";
+										for(var i=0;i<parties.members.length;i++){
+											console.log(queryPlayers[i].name);
+											outString += queryPlayers[i].name + "\n";
+										}
+										console.log("here");
+										message.channel.send(outString);
+										conversationContext = "";
+									}
+								});
+
+				//});
+
 			}
 		})
 	  }
@@ -240,19 +276,13 @@ client.on('messageCreate', (message) => {
   }
 })
 
+
+
 // client.login logs the bot in and sets it up for use. You'll enter your token here.
 client.login(process.env.DiscordToken);
 
 mongoose.connect(process.env.MongoDBToken);
 
-
-const Player = mongoose.model("Player", {
-  name: String,
-  class: String,
-  inventory: [String],
-  won: Number,
-  owner: String
-});
 
 
 // Node class
@@ -299,6 +329,14 @@ function intro(){
 //how will they look though??
 //series of nodes, and directions from one to another
 //
+
+const Player = mongoose.model("Player", {
+  name: String,
+  class: String,
+  inventory: [String],
+  won: Number,
+  owner: String
+});
 
 const partySchema = Schema({
 	guild: String,
