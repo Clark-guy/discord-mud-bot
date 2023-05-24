@@ -77,7 +77,43 @@ questions..
 	 |-Building(store)
 	 	 |-Person(Shopkeep)
 
+###Random thought- what if the more questions you ask in an area, the more unsettled
+	people are? like if each Building (maybe change building for Area) had an unsettled
+	score that increased the more questions you asked, and made people more cagey until
+	you left them alone for a little while or did something to lighten their mood
+		- perhaps each person in an area could have a 'unsettled' variable. If it went
+			up too high, they would talk to the other people in the area (bot would say
+			something like 'dilby and richard are talking...' and their unsettled variables
+			would 'compress' slightly (high goes down, due to talking- low goes up)
 
 
+###RT - Dialogue can feel stale in games, even when a lot of attention is put into making it
+	interesting. I imagine this is due to the exponential complexity involved with
+	having more than a few characters- for each added character, having multiple
+	paths of discussion naturally would result in very high complexity
+	 - some games prevent this by having multiple dialogue options that only affect
+	 	the next line of dialogue- we can tell, and this feels stale.
+		E.g.
+		Paimon: Traveler, you suck!
+		Traveler: Paimon is an emergency snack OR Paimon shush up you
+		Paimon: Don't talk to me that way (outcome the same either way)
+	 - Don't know if this would make sense, but perhaps larger deviations from the
+	 	branching paths could alleviate this slightly
+		Old: -=-
+		       __
+		New: -=__=-
+
+###RT - Djikstra's shortest path algorithm could be fun to mess with, with respect to
+		the map nodes
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Need tpo rethink slightly how to do games/parties. Running into an issue with
+adding a player to a party, i want to add a guildId to player, so they cant be 
+brought from one server to another. That being said, maybe remove the idea of a
+"game" schema and just attach the guild Id to everything, so that people can't 
+mix and match between servers. 
 
 

@@ -27,7 +27,37 @@ function yesNo(message){
 	return message.startsWith('y') || message.startsWith('0');
 }
 
+function multChoice(choice){
+	choice = choice.replace(".", "");
+	choice = choice.replace(" ", "");
+	choice = Number(choice);
+	return choice-=1;
+}
+
 function handleResponse(message, options){
+
+	if(conversationContext == "choosePlayer"){
+		var pQuery = Player.find({'owner': message.author.id}, 'name');
+		pQuery.select("*");
+		pQuery.exec().then(function (players){
+			if(!players){
+				message.channel.send("No players owned by the current user. Creating new one..");
+				message.channel.send("Enter a name for your character");
+				conversationContext = "newPlayerName";
+			}
+			else{
+				var outString = "";
+				for(var i=0;i<players.length;i++){
+					console.log(players[i].name);
+					outString+=i.toString()+". " + players[i].name+"\n";
+					registerSet.push(players[i]._id)
+				}
+				message.channel.send(outString);
+			}
+		});
+
+
+	}
 	if(conversationContext == "newPlayerName"){
 		//need to sanitize to prevent duplications of name from a single user
 		registerSet.push(message.content);
@@ -35,21 +65,21 @@ function handleResponse(message, options){
 		conversationContext = "newPlayerClass";
 	}
 	else if(conversationContext == "newPlayerClass"){
-		console.log(message.author.id);
+		//console.log(message.author.id);
 		var mc = message.content;
 		if(mc=="1." || mc=="2." || mc=="3." || mc=="4."){
 			registerSet.push(message.content);
 			new Player({
-				user: message.author.id,
+				//user: message.author.id,
 				name: registerSet[0],
 				inventory: ["spoon", "rock"],
 				class: "Cleric",
-				won: 100
+				won: 100,
+				owner: message.author.id
 			}).save();
-			message.channel.send("Your character has been created.");
+			message.channel.send("Your character has been created. Add player to current party?");
 			registerSet = [];
-			conversationContext = ""
-			awaitingResponse = false;
+			conversationContext = "addPlayer"
 
 
 		}
@@ -73,12 +103,57 @@ function handleResponse(message, options){
 	}
 	else if(conversationContext == "addPlayer"){
 		if(yesNo(message.content)){
-			message.channel.send("added to party");
+			var query = Party.findOne({'guild': message.guildId});
+			query.select("*");
+			query.exec().then(function (parties){
+				if(!parties){
+					message.channel.send("Server does not have a party initialized. initialize now?");
+					conversationContext = "createParty";
+				}
+				else{
+					console.log(message.author.id);
+					var pQuery = Player.find({'owner': message.author.id}, 'name');
+					pQuery.select("*");
+					pQuery.exec().then(function (players){
+						if(!players){
+							message.channel.send("No players owned by the current user. Creating new one..");
+							message.channel.send("Enter a name for your character");
+							conversationContext = "newPlayerName";
+						}
+						else{
+							var outString = "";
+							for(var i=0;i<players.length;i++){
+								console.log(players[i]._id);
+								outString+=i.toString()+". " + players[i].name+"\n";
+								registerSet.push(players[i]._id.toString());
+							}
+							message.channel.send("Choose a player to add to party:");
+							message.channel.send(outString);
+							conversationContext = "playerChosen";
+						}
+					});
+				}
+			});
 		}
 		else{
 			message.channel.send("not added");
 		}
 		conversationContext = "";
+	}
+	else if(conversationContext == "playerChosen"){
+		//query player given message.content paired with registerSet
+		message.content = multChoice(message.content);
+		console.log(registerSet[message.content]);
+		console.log(typeof(registerSet[message.content]));
+		//query party given server, query player given ID, add players to server
+		//ALSO Need to grab the array from the party table and add player
+		var partyQuery = Party.findOne({'guild': message.guildId}, 'players').exec().then(function (parties){
+			var playerQuery = Player.findOne({'_id': message.content}).exec().then(function (playerToAdd){
+				console.log(parties.players)
+				parties.players.push(playerToAdd);
+				//parties.members
+			});
+		});
 	}
 }
 
@@ -89,6 +164,19 @@ function handleInput(message){
 	  if(content.includes("!exit")) {
 		console.log("disabling");
 		botEnabled = false;
+	  }
+	  else if(content.includes("!partyStatus")) {
+		var query = Party.findOne({'guild': message.guildId});
+		query.select("*");
+		query.exec().then(function (parties){
+			if(!parties){
+				message.channel.send("Server does not have a party initialized. initialize now?");
+				conversationContext = "createParty";
+			}
+			else{
+				message.channel.send("Party information:");
+			}
+		})
 	  }
 	  else if(content.includes("!newGame")) {
 		conversationContext="newGame"
@@ -111,6 +199,7 @@ function handleInput(message){
 				"\nBOT COMMANDS\n" + 
 				"!exit - quit MUD\n" + 
 				"!enableBot - enable MUD\n" + 
+				"!partyStatus - Display current party information, if applicable\n" +
 				"!newPlayer - create a new player\n" +
 				"!addPlayer - add a new player to party\n" +
 				"!removePlayer - remove a player from party\n" +
@@ -160,7 +249,8 @@ const Player = mongoose.model("Player", {
   name: String,
   class: String,
   inventory: [String],
-  won: Number
+  won: Number,
+  owner: String
 });
 
 
