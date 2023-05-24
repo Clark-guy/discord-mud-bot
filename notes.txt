@@ -139,5 +139,8 @@ TODO:
  - Move bot enabling onto the database level, so that different servers can choose whether
  	or not it is enabled - there should be very strict operational boundaries between 
 	servers, for obvious reasons.
+	 - 
 
  - Would be good to find out why a null player was entered.. 
+ 
+ - Should I limit parties to one character per player? maybe not crucial..

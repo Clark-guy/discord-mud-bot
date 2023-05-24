@@ -13,12 +13,12 @@ const client = new Client({
 
 
 //////////////GLOBAL VARIABLES/////////////
+//In order for the bot to work with multiple servers, all global vars should be moved to
+//the database as a "game" or "session" table, that holds a record for each server
+//
 var botEnabled = false;
-var currentTurn; //variable to hold whose turn it is to speak to the bot
+//var currentTurn; //variable to hold whose turn it is to speak to the bot
 //TODO maybe i can merge awaiting response and conversation context into one variable?
-//var awaitingResponse = false; //bool to determine whether the bot is waiting for a response // DELETE THIS LINE
-//var responseOptions = []; //list of options //PROBABLY DELETE THIS TOO
-//var playerResponse = 0; // value to hold a player response in case of multiple choice //DELETE THIS PROBABLY TOO
 
 //Conversation Context Var
 //Used to control the context of the conversation, particularly for progressing conversation with
@@ -52,7 +52,6 @@ function handleResponse(message, options){
 
 	if(conversationContext == "choosePlayer"){
 		var pQuery = Player.find({'owner': message.author.id}, 'name');
-		pQuery.select("*");
 		pQuery.exec().then(function (players){
 			if(!players){
 				message.channel.send("No players owned by the current user. Creating new one..");
@@ -116,7 +115,7 @@ function handleResponse(message, options){
 	else if(conversationContext == "addPlayer"){
 		if(yesNo(message.content)){
 			var query = Party.findOne({'guild': message.guildId});
-			query.select("*");
+			//query.select("*");
 			query.exec().then(function (parties){
 				if(!parties){
 					message.channel.send("Server does not have a party initialized. initialize now?");
@@ -125,7 +124,7 @@ function handleResponse(message, options){
 				else{
 					//console.log(message.author.id);
 					var pQuery = Player.find({'owner': message.author.id}, 'name');
-					pQuery.select("*");
+					//pQuery.select("*");
 					pQuery.exec().then(function (players){
 						if(!players){
 							message.channel.send("No players owned by the current user. Creating new one..");
@@ -167,6 +166,23 @@ function handleResponse(message, options){
 			});
 		});
 	}
+	else if(conversationContext == "newGame"){
+		if(yesNo(message.content)){
+			//i may need to hold more information about the party in order to make
+			//informed dialogue in the future.
+			message.channel.send("beginning your adventure...");
+			//denote the time period - setting. explain how your party met, and how they came to arrive where they did
+			message.channel.send("After weeks at sea, your party arrives in ___. It's been a long, grueling trip, " +
+				"and the entire crew is exhausted. Upon docking you all stumble down the gang plank onto the docks of " +
+				"the largest port city in Dilbesia." 
+
+
+			);
+		}
+		else{
+			message.channel.send("return when you are ready.");
+		}
+	}
 }
 
 
@@ -186,7 +202,7 @@ function handleInput(message){
 				conversationContext = "createParty";
 			}
 			else{
-				message.channel.send("Party information:");
+				message.channel.send("Party Members:");
 				var players = Player.find({
 								_id: {
 									$in: parties.members
@@ -198,14 +214,16 @@ function handleInput(message){
 										conversationContext = "newPlayerName";
 									}
 									else{
-										//console.log(queryPlayers);
 										var outString = "";
 										for(var i=0;i<parties.members.length;i++){
-											console.log(queryPlayers[i].name);
 											outString += queryPlayers[i].name + "\n";
 										}
-										console.log("here");
-										message.channel.send(outString);
+										if(outString){
+											message.channel.send(outString);
+										}
+										else{
+											message.channel.send("None!");
+										}
 										conversationContext = "";
 									}
 								});
@@ -229,7 +247,7 @@ function handleInput(message){
 	  }
 	  else if(content.startsWith("!help")){
 		message.reply({content: "Help\n\n" + 
-				"GETTING STARTED" +
+				"GETTING STARTED\n" +
 				"To begin, you'll want to make a party for your server first. Then,  " +
 				"create a player for each person playing, and add their players to the " +
 				"party. when all party members are ready, use the !newGame command to begin.\n" +
@@ -243,6 +261,9 @@ function handleInput(message){
 				"!newGame - lock in players and begin\n" +
 				"!map - show map\n" +
 				""});
+	  }
+	  else if(content.startsWith("!map")){
+		message.channel.send("Map!");
 	  }
   }
 	else{
@@ -266,7 +287,7 @@ client.on('messageCreate', (message) => {
     botEnabled = true;
     message.channel.send("Bot enabled");
 	var query = Party.findOne({'guild': message.guildId});
-	query.select("*");
+	//query.select("*");
 	query.exec().then(function (parties){
 		if(!parties){
 			message.channel.send("Server does not have a party initialized. initialize now?");
@@ -306,20 +327,6 @@ class Node {
 	}
 }
 
-//This will probably be deleted...
-function intro(){
-	var base = new Node("Is the party ready to continue? Yes or No");
-	base.addChildren({"yes": new Node("Then we continue. Your party is chill, right?",{
-								"yes": new Node("Your party is all hanging out by a cool river. Will you go swimming?",{
-									"yes": new Node(""),
-									"no":  new Node("")}),
-								"no" : new Node("",{
-									"yes": new Node(""),
-									"no":  new Node("")})
-							}),
-						"no": new Node("Approach again when you are ready.")});
-
-}
 
 
 
@@ -329,6 +336,12 @@ function intro(){
 //how will they look though??
 //series of nodes, and directions from one to another
 //
+
+const sessionSchema = Schema({
+	botEnabled: Boolean,
+	registerSet: [String],
+	conversationContext: String
+});
 
 const Player = mongoose.model("Player", {
   name: String,
