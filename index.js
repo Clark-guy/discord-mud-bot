@@ -16,7 +16,7 @@ const client = new Client({
 //In order for the bot to work with multiple servers, all global vars should be moved to
 //the database as a "game" or "session" table, that holds a record for each server
 //
-var botEnabled = false;
+//var botEnabled = false;
 //var currentTurn; //variable to hold whose turn it is to speak to the bot
 //TODO maybe i can merge awaiting response and conversation context into one variable?
 
@@ -47,9 +47,10 @@ function multChoice(choice){
 }
 
 
-//////////////EVENT HANDLING//////////////////
-function handleResponse(message, options){
 
+//////////////EVENT HANDLING//////////////////
+function handleResponse(message, session){
+	//Session.findOne({"guild":message.guildId}).exec().then(function (session){
 	if(conversationContext == "choosePlayer"){
 		var pQuery = Player.find({'owner': message.author.id}, 'name');
 		pQuery.exec().then(function (players){
@@ -61,7 +62,6 @@ function handleResponse(message, options){
 			else{
 				var outString = "";
 				for(var i=0;i<players.length;i++){
-					//console.log(players[i].name);
 					outString+=i.toString()+". " + players[i].name+"\n";
 					registerSet.push(players[i]._id)
 				}
@@ -76,7 +76,6 @@ function handleResponse(message, options){
 		conversationContext = "newPlayerClass";
 	}
 	else if(conversationContext == "newPlayerClass"){
-		//console.log(message.author.id);
 		var mc = message.content;
 		if(mc=="1." || mc=="2." || mc=="3." || mc=="4."){
 			registerSet.push(message.content);
@@ -122,7 +121,6 @@ function handleResponse(message, options){
 					conversationContext = "createParty";
 				}
 				else{
-					//console.log(message.author.id);
 					var pQuery = Player.find({'owner': message.author.id}, 'name');
 					//pQuery.select("*");
 					pQuery.exec().then(function (players){
@@ -134,7 +132,6 @@ function handleResponse(message, options){
 						else{
 							var outString = "";
 							for(var i=0;i<players.length;i++){
-								//console.log(players[i]._id);
 								outString+=i.toString()+". " + players[i].name+"\n";
 								registerSet.push(players[i]._id.toString());
 							}
@@ -172,9 +169,9 @@ function handleResponse(message, options){
 			//informed dialogue in the future.
 			message.channel.send("beginning your adventure...");
 			//denote the time period - setting. explain how your party met, and how they came to arrive where they did
-			message.channel.send("After weeks at sea, your party arrives in ___. It's been a long, grueling trip, " +
-				"and the entire crew is exhausted. Upon docking you all stumble down the gang plank onto the docks of " +
-				"the largest port city in Dilbesia." 
+			message.channel.send("" +
+				"" +
+				"" 
 
 
 			);
@@ -183,20 +180,22 @@ function handleResponse(message, options){
 			message.channel.send("return when you are ready.");
 		}
 	}
+	//});
 }
 
 
-function handleInput(message){
+function handleInput(message, session){
   content = message.content
   if(conversationContext==""){
 	  if(content.includes("!exit")) {
-		console.log("disabling");
-		botEnabled = false;
+	  	var sessionQuery = Session.findOne({'guild': message.guildId}).exec().then(function (sessions){
+			session.botEnabled = false;
+			session.save();
+			message.channel.send("Bot disabled");
+		});
 	  }
 	  else if(content.includes("!partyStatus")) {
-		var query = Party.findOne({'guild': message.guildId}, 'members');
-		query.select("*");
-		query.exec().then(function (parties){
+		var query = Party.findOne({'guild': message.guildId}, 'members').exec().then(function (parties){
 			if(!parties){
 				message.channel.send("Server does not have a party initialized. initialize now?");
 				conversationContext = "createParty";
@@ -268,34 +267,56 @@ function handleInput(message){
   }
 	else{
 		//how to handle response?
-		handleResponse(message);
+		handleResponse(message, session);
 	}
 	//help fallthru
 }
 
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
-})
+	console.log(`Logged in as ${client.user.tag}!`);
+	//const Guilds = client.guilds.cache.map(guild => guild.id);
+	Session.find().exec().then(function (session){
+		for(var i=0;i<session.length;i++){
+			session[i].botEnabled = false;
+			session[i].save();
+		}
+	});
+});
 
 // Register an event to handle incoming messages
 client.on('messageCreate', (message) => {
-  if (botEnabled == true && message.author.bot == false){
-    handleInput(message);
-  }
-  else if (message.content == "!enableBot" && message.author.bot == false){
-    botEnabled = true;
-    message.channel.send("Bot enabled");
-	var query = Party.findOne({'guild': message.guildId});
-	//query.select("*");
-	query.exec().then(function (parties){
-		if(!parties){
-			message.channel.send("Server does not have a party initialized. initialize now?");
-			conversationContext = "createParty";
+	Session.findOne({'guild': message.guildId}).exec().then(function (session){
+		if (message.content == "!enableBot" && message.author.bot == false){
+			//var sessionQuery = Session.findOne({'guild': message.guildId}).exec().then(function (sessions){
+				//if no session has been made, create new session
+				if(!session){
+					new Session({
+						guild: message.guildId,
+						botEnabled: true,
+						registerSet: [],
+						conversationContext: "",
+						currentTurn: null 
+					}).save();
+				}
+				else{
+					session.botEnabled = true;
+					session.save();
+					var query = Party.findOne({'guild': message.guildId}).exec().then(function (parties){
+						if(!parties){
+							message.channel.send("Server does not have a party initialized. initialize now?");
+							conversationContext = "createParty";
+						}
+					});
+				}
+				message.channel.send("Bot enabled");
+			//});
 		}
-	})
-  }
-})
+		else if (session.botEnabled == true && message.author.bot == false){
+			handleInput(message, session);
+		}
+	});
+});
 
 
 
@@ -338,9 +359,11 @@ class Node {
 //
 
 const sessionSchema = Schema({
+	guild: String,
 	botEnabled: Boolean,
 	registerSet: [String],
-	conversationContext: String
+	conversationContext: String,
+	currentTurn: [{ type: Schema.Types.ObjectId, ref: 'Player' }]
 });
 
 const Player = mongoose.model("Player", {
@@ -392,6 +415,7 @@ const mapSchema = Schema({
 	locations: [{ type: Schema.Types.ObjectId, ref: 'MapNode' }]
 });
 
+const Session = mongoose.model("Session", sessionSchema);
 const Party = mongoose.model("Party", partySchema);
 const Game = mongoose.model("Game", gameSchema);
 const NPC = mongoose.model('NPC', npcSchema);

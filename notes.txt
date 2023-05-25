@@ -144,3 +144,13 @@ TODO:
  - Would be good to find out why a null player was entered.. 
  
  - Should I limit parties to one character per player? maybe not crucial..
+
+ ###RT - because I'm storing the map in the database, I could maybe store multiple copies
+ 		of the map - this would allow me to change the map under certain circumstances?
+		e.g. a ship leaves the harbor, a building burns down, a portal opens
+			-wait- just realized this removes the whole point of this being online really,
+			because if people are at different stages and are seeing different maps...
+			that could MAYBE work?? Unsure..
+		-previously i had been thinking of multiple play modes (campaign vs quest or waves)
+		- maybe this could be made use of there??
+		- worth considering, but not making any promises on it...
