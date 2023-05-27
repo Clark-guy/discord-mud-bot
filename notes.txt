@@ -131,6 +131,8 @@ Also, something has caused the entry of a null member in a party on the new serv
 This breaks shit, so I have to sort that out as well. Stronger architecture would help
 this move a little more smoothly- however, I lack the experience necessary to know how
 to do that. 
+ - This happened a second time while testing, but with many more null entries- 
+   will require further looking into.
 
 TODO:
  - lock conversation contexts to a certain user, so other members talking doesn't interrupt
@@ -154,3 +156,15 @@ TODO:
 		-previously i had been thinking of multiple play modes (campaign vs quest or waves)
 		- maybe this could be made use of there??
 		- worth considering, but not making any promises on it...
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~5/25/23
+Found out that adding a player to a party when they are already in the
+party results in that error I mentioned previously. Should be fine to fix
+that.
+
+Thinking about splitting up files, I'll probably want a different file for
+each section of the map you can visit. Maybe have the basic event handling
+in the main file, and then extensions to each event handler in separate files.
+will have to work it out to see what that'll look like

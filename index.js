@@ -13,24 +13,11 @@ const client = new Client({
 
 
 //////////////GLOBAL VARIABLES/////////////
-//In order for the bot to work with multiple servers, all global vars should be moved to
+//In order for the bot to work with multiple servers, most global vars should be moved to
 //the database as a "game" or "session" table, that holds a record for each server
-//
-//var botEnabled = false;
-//var currentTurn; //variable to hold whose turn it is to speak to the bot
-//TODO maybe i can merge awaiting response and conversation context into one variable?
+//	Exceptions - shared consts, like classList
 
-//Conversation Context Var
-//Used to control the context of the conversation, particularly for progressing conversation with
-//bot. necessary for basic functionality.
-var conversationContext = ""; 
-
-//Register Set Var
-//This kind of seems like a terrible way to do this but let's get the ball rolling.
-//Used to store input from player when multiple pieces of information must be used at a time.
-//example, character creation. push name, then class, then any other necessary vars so
-//that the registers are consolidated when being used. Must be cleared after use
-var registerSet = []; 
+const classList = ["Cleric", "Bard", "Peasant", "Jester"]
 
 
 //////////////UTILITY FUNCTIONS/////////////
@@ -51,74 +38,81 @@ function multChoice(choice){
 //////////////EVENT HANDLING//////////////////
 function handleResponse(message, session){
 	//Session.findOne({"guild":message.guildId}).exec().then(function (session){
-	if(conversationContext == "choosePlayer"){
+	if(session.conversationContext == "choosePlayer"){
 		var pQuery = Player.find({'owner': message.author.id}, 'name');
 		pQuery.exec().then(function (players){
 			if(!players){
 				message.channel.send("No players owned by the current user. Creating new one..");
 				message.channel.send("Enter a name for your character");
-				conversationContext = "newPlayerName";
+				session.conversationContext = "newPlayerName";
+				session.save();
 			}
 			else{
 				var outString = "";
 				for(var i=0;i<players.length;i++){
 					outString+=i.toString()+". " + players[i].name+"\n";
-					registerSet.push(players[i]._id)
+					session.registerSet.push(players[i]._id)
+					session.save();
 				}
 				message.channel.send(outString);
 			}
 		});
 	}
-	if(conversationContext == "newPlayerName"){
+	if(session.conversationContext == "newPlayerName"){
 		//need to sanitize to prevent duplications of name from a single user
-		registerSet.push(message.content);
+		session.registerSet.push(message.content);
 		message.channel.send("What class would you like to be?\n1.Cleric\n2.Bard\n3.Peasant\n4.Jester");
-		conversationContext = "newPlayerClass";
+		session.conversationContext = "newPlayerClass";
+		session.save();
 	}
-	else if(conversationContext == "newPlayerClass"){
+	else if(session.conversationContext == "newPlayerClass"){
 		var mc = message.content;
 		if(mc=="1." || mc=="2." || mc=="3." || mc=="4."){
-			registerSet.push(message.content);
+			//session.registerSet.push(message.content);
+			//session.save();
+			var classChoice = classList[multChoice(mc)]
 			new Player({
 				//user: message.author.id,
-				name: registerSet[0],
+				name: session.registerSet[0],
 				inventory: ["spoon", "rock"],
-				class: "Cleric",
+				class: classChoice,
 				won: 100,
 				owner: message.author.id
 			}).save();
 			message.channel.send("Your character has been created. Add player to current party?");
-			registerSet = [];
-			conversationContext = "addPlayer"
-
+			session.registerSet = [];
+			session.conversationContext = "addPlayer"
+			session.save();
 
 		}
 		else{
 			message.channel.send("please try again- answer multiple choice questions with the number of your choice, followed by a period. E.G. '2.'");
 		}
 	}
-	else if(conversationContext == "createParty"){
+	else if(session.conversationContext == "createParty"){
 		if(yesNo(message.content)){
 			new Party({
 				guild: message.guildId,
 				members: [],
 			}).save();
 			message.channel.send("Created new party");
-			registerSet = [];
+			session.registerSet = [];
+			//session.save();
 		}
 		else{
 			message.channel.send("Not creating a new party");
 		}
-		conversationContext = "";
+		session.conversationContext = "";
+		session.save();
 	}
-	else if(conversationContext == "addPlayer"){
+	else if(session.conversationContext == "addPlayer"){
 		if(yesNo(message.content)){
 			var query = Party.findOne({'guild': message.guildId});
-			//query.select("*");
 			query.exec().then(function (parties){
 				if(!parties){
 					message.channel.send("Server does not have a party initialized. initialize now?");
-					conversationContext = "createParty";
+					session.conversationContext = "createParty";
+					session.save();
 				}
 				else{
 					var pQuery = Player.find({'owner': message.author.id}, 'name');
@@ -127,17 +121,19 @@ function handleResponse(message, session){
 						if(!players){
 							message.channel.send("No players owned by the current user. Creating new one..");
 							message.channel.send("Enter a name for your character");
-							conversationContext = "newPlayerName";
+							session.conversationContext = "newPlayerName";
+							session.save();
 						}
 						else{
 							var outString = "";
 							for(var i=0;i<players.length;i++){
 								outString+=i.toString()+". " + players[i].name+"\n";
-								registerSet.push(players[i]._id.toString());
+								session.registerSet.push(players[i]._id.toString());
 							}
 							message.channel.send("Choose a player to add to party:");
 							message.channel.send(outString);
-							conversationContext = "playerChosen";
+							session.conversationContext = "playerChosen";
+							session.save();
 						}
 					});
 				}
@@ -145,60 +141,107 @@ function handleResponse(message, session){
 		}
 		else{
 			message.channel.send("not added");
+			session.conversationContext = "";
+			session.save();
 		}
-		conversationContext = "";
 	}
-	else if(conversationContext == "playerChosen"){
+	else if(session.conversationContext == "playerChosen"){
 		var character = multChoice(message.content);
-		//ALSO Need to grab the array from the party table and add player
-		var playerQuery = Player.findOne({'_id': registerSet[character]}).exec().then(function (playerToAdd){
+		var playerQuery = Player.findOne({'_id': session.registerSet[character]}).exec().then(function (playerToAdd){
 			var partyQuery = Party.findOne({'guild': message.guildId}, 'members').exec().then(function (parties){
-				parties.members.push(playerToAdd);
-				parties.save();
-				message.channel.send(`Added ${playerToAdd.name} to party.`);
-				registerSet = [];
-				conversationContext = "";
+				var dupeFlag = false;
+				for(var i=0;i<parties.members.length;i++){
+					if(playerToAdd._id.toString()==parties.members[i].toString()){
+						dupeFlag = true;
+					}
+				}
+				if(!dupeFlag){
+					parties.members.push(playerToAdd);
+					parties.save();
+					message.channel.send(`Added ${playerToAdd.name} to party.`);
+					session.registerSet = [];
+					session.conversationContext = "";
+					session.save();
+				}
+				else{
+					message.channel.send("Player is already in party!");
+				}
 				//parties.members
 				
 			});
 		});
 	}
-	else if(conversationContext == "newGame"){
+	else if(session.conversationContext == "newGame"){
 		if(yesNo(message.content)){
 			//i may need to hold more information about the party in order to make
 			//informed dialogue in the future.
 			message.channel.send("beginning your adventure...");
 			//denote the time period - setting. explain how your party met, and how they came to arrive where they did
-			message.channel.send("" +
-				"" +
-				"" 
-
-
+			message.channel.send("Pale blue, running along an unwavering line of deep blue. In nature, perfect geometric figures are quite rare, " +
+				"and so you and your party spend many hours of the day watching it. The colors of each blend from their respective " +
+				"blues to brilliant yellows, reds, and finally black- all the while respecting the boundary drawn between them that " +
+				"you call the horizon. What a point that is, indeed- the edge of what is tangible, beyond which is everything else. " +
+				"everything you've seen and known, but cannot see now, shrouded by the curvature of the earth- as well as " +
+				"everything you've not seen, but heard of- stories of great beasts roaming the earth, armies conquering and being conquered, "+
+				"individuals with strange talents and great aspirations, forests thousands of years older than those who " + 
+				"reside in them- the list goes " +
+				"on. Of course it does, it contains just shy of everything...");
+			message.channel.send("\nThe sea laps weakly against the hull of the ship. The hull creaks in tune with the rolling motion which " +
+				"took you all so long to adjust to. Beyond this, it is a quiet night- the fatigue that accompanies many weeks at sea can " +
+				"remind the importance of some peace and quiet. Apparently, the lookout did not get the memo."
 			);
+			message.channel.send("\n'LAND!' Shouts the lookout, rousing the crew. Your party, not being directly involved in " + 
+				"the ship's navigation, begin preparing for landing in this strange land. You gather around a table to discuss what you " +
+				"will be doing upon arrival."
+			);
+			message.channel.send("'Who are you again??' you ask to one of your party members. in fact, you can't remember any of "+
+				"them. While absurd and illogical, it is the truth- after months at sea together, none of you can remember a thing " + 
+				"about each other. Perhaps you should all introduce yourselves and explain your backgrounds."
+			);
+			session.conversationContext = "";
+			session.save();
+			//would be nice now to wait for each player to speak, then continue when they have. 
+			//maybe add json to register set, key:value of player:bool (bool being whether or not
+			//they've talked yet - check on this until everyone has talked then move on)
+
 		}
 		else{
 			message.channel.send("return when you are ready.");
 		}
 	}
-	//});
+	else if(session.conversationContext == ""){
+		
+	}
 }
 
 
 function handleInput(message, session){
   content = message.content
-  if(conversationContext==""){
+  if(session.conversationContext==""){
 	  if(content.includes("!exit")) {
-	  	var sessionQuery = Session.findOne({'guild': message.guildId}).exec().then(function (sessions){
-			session.botEnabled = false;
-			session.save();
-			message.channel.send("Bot disabled");
+		session.botEnabled = false;
+		session.save();
+		message.channel.send("Bot disabled");
+	  }
+	  else if(content.includes("!deleteParty")) {
+		var query = Party.findOneAndDelete({'guild': message.guildId}).exec().then(function (parties){
+			if(!parties){
+				message.channel.send("Server does not have a party initialized. initialize now?");
+				session.conversationContext = "createParty";
+				session.save();
+			}
+			else{
+				message.channel.send("Party deleted.");	
+			}
 		});
 	  }
+
 	  else if(content.includes("!partyStatus")) {
 		var query = Party.findOne({'guild': message.guildId}, 'members').exec().then(function (parties){
 			if(!parties){
 				message.channel.send("Server does not have a party initialized. initialize now?");
-				conversationContext = "createParty";
+				session.conversationContext = "createParty";
+				session.save();
 			}
 			else{
 				message.channel.send("Party Members:");
@@ -210,7 +253,8 @@ function handleInput(message, session){
 									if(!queryPlayers){
 										message.channel.send("No players owned by the current user. Creating new one..");
 										message.channel.send("Enter a name for your character");
-										conversationContext = "newPlayerName";
+										session.conversationContext = "newPlayerName";
+										session.save();
 									}
 									else{
 										var outString = "";
@@ -223,7 +267,8 @@ function handleInput(message, session){
 										else{
 											message.channel.send("None!");
 										}
-										conversationContext = "";
+										session.conversationContext = "";
+										session.save();
 									}
 								});
 
@@ -233,15 +278,18 @@ function handleInput(message, session){
 		})
 	  }
 	  else if(content.includes("!newGame")) {
-		conversationContext="newGame"
+		session.conversationContext="newGame"
+		session.save();
 		message.channel.send("creating a new game. are all party members set?");
 	  }
 	  else if(content.includes("!newPlayer")) {
-	  	conversationContext = "newPlayerName"
+	  	session.conversationContext = "newPlayerName"
+		session.save();
 		message.channel.send("Let us make a new player. What will be your player's name?");
 	  }
 	  else if(content.includes("!addPlayer")) {
-	  	conversationContext = "addPlayer"
+	  	session.conversationContext = "addPlayer"
+		session.save();
 		message.channel.send("add player to this server's party?");
 	  }
 	  else if(content.startsWith("!help")){
@@ -262,7 +310,11 @@ function handleInput(message, session){
 				""});
 	  }
 	  else if(content.startsWith("!map")){
-		message.channel.send("Map!");
+		const fs = require('fs');
+		//import * as fs from 'fs';
+		fs.readFile('./mapFolder/map', 'utf8', (err,data) =>{
+			message.channel.send('```\n' + data + '```');
+		});
 	  }
   }
 	else{
@@ -279,6 +331,8 @@ client.on('ready', () => {
 	Session.find().exec().then(function (session){
 		for(var i=0;i<session.length;i++){
 			session[i].botEnabled = false;
+			session[i].conversationContext = "";
+			session[i].registerSet = [];
 			session[i].save();
 		}
 	});
@@ -300,13 +354,13 @@ client.on('messageCreate', (message) => {
 					}).save();
 				}
 				else{
-					session.botEnabled = true;
-					session.save();
 					var query = Party.findOne({'guild': message.guildId}).exec().then(function (parties){
+						session.botEnabled = true;
 						if(!parties){
 							message.channel.send("Server does not have a party initialized. initialize now?");
-							conversationContext = "createParty";
+							session.conversationContext = "createParty";
 						}
+						session.save();
 					});
 				}
 				message.channel.send("Bot enabled");
@@ -423,12 +477,12 @@ const Building = mongoose.model('Building', buildingSchema);
 const MapNode = mongoose.model('MapNode', mapNodeSchema);
 const Map = mongoose.model("Map", mapSchema);
 
-const guy = new Player({
+/*const guy = new Player({
   name: "Mario Guy",
   inventory: ["spoon", "rock"],
   class: "Cleric",
   won: 100
-});
+});*/
 
 //guy.save().then(() => console.log(Player.findOne({})));
 
