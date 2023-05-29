@@ -33,6 +33,12 @@ function multChoice(choice){
 	return choice-=1;
 }
 
+function getParty(session){
+	Party.findOne({'guild': session.guild}).exec().then(function (parties){
+		console.log(parties);
+	});
+};
+
 
 
 //////////////EVENT HANDLING//////////////////
@@ -196,13 +202,18 @@ function handleResponse(message, session){
 			);
 			message.channel.send("'Who are you again??' you ask to one of your party members. in fact, you can't remember any of "+
 				"them. While absurd and illogical, it is the truth- after months at sea together, none of you can remember a thing " + 
-				"about each other. Perhaps you should all introduce yourselves and explain your backgrounds."
+				"about each other. Perhaps you should all introduce yourselves and explain your backgrounds. (will continue when all " +
+				"party members have spoken)"
 			);
+			console.log(session);
+			console.log(getParty(session));
 			session.conversationContext = "";
 			session.save();
 			//would be nice now to wait for each player to speak, then continue when they have. 
 			//maybe add json to register set, key:value of player:bool (bool being whether or not
 			//they've talked yet - check on this until everyone has talked then move on)
+			//OR i could start working on turns here- add all players to an array of whose turn it
+			//is, and then have the bot tell the party whose turn it is to speak
 
 		}
 		else{
@@ -350,7 +361,8 @@ client.on('messageCreate', (message) => {
 						botEnabled: true,
 						registerSet: [],
 						conversationContext: "",
-						currentTurn: null 
+						currentTurn: null,
+						partyMembers: null
 					}).save();
 				}
 				else{
@@ -417,7 +429,8 @@ const sessionSchema = Schema({
 	botEnabled: Boolean,
 	registerSet: [String],
 	conversationContext: String,
-	currentTurn: [{ type: Schema.Types.ObjectId, ref: 'Player' }]
+	currentTurn: { type: Schema.Types.ObjectId, ref: 'Player' },
+	partyMembers: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
 });
 
 const Player = mongoose.model("Player", {
