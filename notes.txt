@@ -168,3 +168,11 @@ Thinking about splitting up files, I'll probably want a different file for
 each section of the map you can visit. Maybe have the basic event handling
 in the main file, and then extensions to each event handler in separate files.
 will have to work it out to see what that'll look like
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~5/29/23
+removed parties as a table- now just using session to contain party information. this is
+cleaner - prevents multiple queries for information that should be consolidated. Now 
+working on turns, soon it will be enemies and map - feel like I'm forgetting something
+design-wise... like in a few days I'll think 'shit, i should have done this THAT way..'.
+we'll see- hopefully I'm wrong.

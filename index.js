@@ -35,7 +35,7 @@ function multChoice(choice){
 
 function getParty(session){
 	Party.findOne({'guild': session.guild}).exec().then(function (parties){
-		console.log(parties);
+		//console.log(parties);
 	});
 };
 
@@ -97,10 +97,11 @@ function handleResponse(message, session){
 	}
 	else if(session.conversationContext == "createParty"){
 		if(yesNo(message.content)){
-			new Party({
+			session.partyMembers = [];
+			/*new Party({
 				guild: message.guildId,
 				members: [],
-			}).save();
+			}).save();*/
 			message.channel.send("Created new party");
 			session.registerSet = [];
 			//session.save();
@@ -113,9 +114,9 @@ function handleResponse(message, session){
 	}
 	else if(session.conversationContext == "addPlayer"){
 		if(yesNo(message.content)){
-			var query = Party.findOne({'guild': message.guildId});
-			query.exec().then(function (parties){
-				if(!parties){
+			var query = Session.findOne({'guild': message.guildId});
+			query.exec().then(function (session){
+				if(!session.partyMembers){
 					message.channel.send("Server does not have a party initialized. initialize now?");
 					session.conversationContext = "createParty";
 					session.save();
@@ -154,27 +155,22 @@ function handleResponse(message, session){
 	else if(session.conversationContext == "playerChosen"){
 		var character = multChoice(message.content);
 		var playerQuery = Player.findOne({'_id': session.registerSet[character]}).exec().then(function (playerToAdd){
-			var partyQuery = Party.findOne({'guild': message.guildId}, 'members').exec().then(function (parties){
-				var dupeFlag = false;
-				for(var i=0;i<parties.members.length;i++){
-					if(playerToAdd._id.toString()==parties.members[i].toString()){
-						dupeFlag = true;
-					}
+			var dupeFlag = false;
+			for(var i=0;i<session.partyMembers.length;i++){
+				if(playerToAdd._id.toString()==session.partyMembers[i].toString()){
+					dupeFlag = true;
 				}
-				if(!dupeFlag){
-					parties.members.push(playerToAdd);
-					parties.save();
-					message.channel.send(`Added ${playerToAdd.name} to party.`);
-					session.registerSet = [];
-					session.conversationContext = "";
-					session.save();
-				}
-				else{
-					message.channel.send("Player is already in party!");
-				}
-				//parties.members
-				
-			});
+			}
+			if(!dupeFlag){
+				session.partyMembers.push(playerToAdd);
+				message.channel.send(`Added ${playerToAdd.name} to party.`);
+				session.registerSet = [];
+				session.conversationContext = "";
+				session.save();
+			}
+			else{
+				message.channel.send("Player is already in party!");
+			}
 		});
 	}
 	else if(session.conversationContext == "newGame"){
@@ -205,10 +201,15 @@ function handleResponse(message, session){
 				"about each other. Perhaps you should all introduce yourselves and explain your backgrounds. (will continue when all " +
 				"party members have spoken)"
 			);
-			console.log(session);
-			console.log(getParty(session));
-			session.conversationContext = "";
-			session.save();
+			session.turnQueue = []
+			for(var i=0;i<session.partyMembers.length;i++){
+				session.turnQueue.push(session.partyMembers[i]);
+			}
+			Player.findOne({'_id':session.turnQueue[0]}).exec().then(function(player){
+				message.channel.send("It is " + player.name +"'s turn");
+				session.conversationContext = "takeTurn";
+				session.save();
+			});
 			//would be nice now to wait for each player to speak, then continue when they have. 
 			//maybe add json to register set, key:value of player:bool (bool being whether or not
 			//they've talked yet - check on this until everyone has talked then move on)
@@ -219,6 +220,35 @@ function handleResponse(message, session){
 		else{
 			message.channel.send("return when you are ready.");
 		}
+	}
+	else if(session.conversationContext == "takeTurn"){
+		//need to have a handler in here that takes the input and reflects it into
+		//the world- for example, if the message is "attack elf", then I need to
+		//grab whatever player did that, check their stats, and then grab the elf
+		//from local area, and change HP accordingly- then reflect info to guild
+		session.turnQueue.shift();
+		Player.findOne({'_id':session.turnQueue[0]}).exec().then(function(player){
+			//if no player, no turnQueue[0], meaning all done w/ turns
+			if(player){
+				if(player.owner == message.author.id){
+					if(session.turnQueue[1]){
+						message.channel.send("It is " + player.name +"'s turn");
+						session.save();
+					}
+					//this is the last turn
+					else if(session.turnQueue[0]){
+						message.channel.send("It is " + player.name +"'s turn");
+						session.save();
+					}
+					//there are no more turns; resolve
+				}
+			}
+			else{
+				message.channel.send("all done");
+				session.conversationContext = "";
+				session.save();
+			}
+		});
 	}
 	else if(session.conversationContext == ""){
 		
@@ -235,58 +265,56 @@ function handleInput(message, session){
 		message.channel.send("Bot disabled");
 	  }
 	  else if(content.includes("!deleteParty")) {
-		var query = Party.findOneAndDelete({'guild': message.guildId}).exec().then(function (parties){
-			if(!parties){
-				message.channel.send("Server does not have a party initialized. initialize now?");
-				session.conversationContext = "createParty";
-				session.save();
-			}
-			else{
-				message.channel.send("Party deleted.");	
-			}
-		});
+	  	if(!session.partyMembers){
+			message.channel.send("Server does not have a party initialized. initialize now?");
+			session.conversationContext = "createParty";
+			session.save();
+		}
+		else{
+			session.partyMembers = null;
+			session.save();
+			message.channel.send("Party deleted.");	
+		}
 	  }
 
 	  else if(content.includes("!partyStatus")) {
-		var query = Party.findOne({'guild': message.guildId}, 'members').exec().then(function (parties){
-			if(!parties){
-				message.channel.send("Server does not have a party initialized. initialize now?");
-				session.conversationContext = "createParty";
-				session.save();
-			}
-			else{
-				message.channel.send("Party Members:");
-				var players = Player.find({
-								_id: {
-									$in: parties.members
+		if(!session.partyMembers){
+			message.channel.send("Server does not have a party initialized. initialize now?");
+			session.conversationContext = "createParty";
+			session.save();
+		}
+		else{
+			message.channel.send("Party Members:");
+			var players = Player.find({
+							_id: {
+								$in: session.partyMembers
+								}
+							}).then(function(queryPlayers){
+								if(!queryPlayers){
+									message.channel.send("No players owned by the current user. Creating new one..");
+									message.channel.send("Enter a name for your character");
+									session.conversationContext = "newPlayerName";
+									session.save();
+								}
+								else{
+									var outString = "";
+									for(var i=0;i<session.partyMembers.length;i++){
+										outString += queryPlayers[i].name + "\n";
 									}
-								}).then(function(queryPlayers){
-									if(!queryPlayers){
-										message.channel.send("No players owned by the current user. Creating new one..");
-										message.channel.send("Enter a name for your character");
-										session.conversationContext = "newPlayerName";
-										session.save();
+									if(outString){
+										message.channel.send(outString);
 									}
 									else{
-										var outString = "";
-										for(var i=0;i<parties.members.length;i++){
-											outString += queryPlayers[i].name + "\n";
-										}
-										if(outString){
-											message.channel.send(outString);
-										}
-										else{
-											message.channel.send("None!");
-										}
-										session.conversationContext = "";
-										session.save();
+										message.channel.send("None!");
 									}
-								});
+									session.conversationContext = "";
+									session.save();
+								}
+							});
 
-				//});
+			//});
 
-			}
-		})
+		}
 	  }
 	  else if(content.includes("!newGame")) {
 		session.conversationContext="newGame"
@@ -366,14 +394,12 @@ client.on('messageCreate', (message) => {
 					}).save();
 				}
 				else{
-					var query = Party.findOne({'guild': message.guildId}).exec().then(function (parties){
-						session.botEnabled = true;
-						if(!parties){
-							message.channel.send("Server does not have a party initialized. initialize now?");
-							session.conversationContext = "createParty";
-						}
-						session.save();
-					});
+					session.botEnabled = true;
+					if(!session.partyMembers){
+						message.channel.send("Server does not have a party initialized. initialize now?");
+						session.conversationContext = "createParty";
+					}
+					session.save();
 				}
 				message.channel.send("Bot enabled");
 			//});
@@ -429,8 +455,11 @@ const sessionSchema = Schema({
 	botEnabled: Boolean,
 	registerSet: [String],
 	conversationContext: String,
-	currentTurn: { type: Schema.Types.ObjectId, ref: 'Player' },
 	partyMembers: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
+	currentTurn: { type: Schema.Types.ObjectId, ref: 'Player' },
+	turnQueue: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
+	//inCombatWith? maybe not necessary - just check if it's in the same area
+	//
 });
 
 const Player = mongoose.model("Player", {
