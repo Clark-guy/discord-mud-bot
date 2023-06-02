@@ -18,7 +18,12 @@ const client = new Client({
 //	Exceptions - shared consts, like classList
 
 const classList = ["Cleric", "Bard", "Peasant", "Jester"]
-
+const clericEffects = {
+	strength: 2,
+	agility: -1,
+	luck: 3,
+	perception: 0
+}
 
 //////////////UTILITY FUNCTIONS/////////////
 //in general - 0 is yes, 1 is no
@@ -38,6 +43,68 @@ function getParty(session){
 		//console.log(parties);
 	});
 };
+
+function generateMap(){
+	//Delete all npcs, areas, map nodes, maps
+	NPC.deleteMany({}).then(function(npcs){
+		Area.deleteMany({}).then(function(areas){
+			MapNode.deleteMany({}).then(function(mapNodes){
+				Map.deleteMany({}).then(function(maps){
+					console.log(npcs);
+					console.log(areas);
+					console.log(mapNodes);
+					console.log(maps);
+					const buddyHolly = new NPC({
+						name:"Buddy Holly",
+						job: "guitarist",
+						level: 3,
+						maxHP: 10,
+						currentHP: 10
+					});
+					buddyHolly.save();
+					const park = new Area({
+						name: "downtown park",
+						description: "A charming little park in the center of downtown Mitla.",
+						type: "park",
+						sessionPresent: [],
+						npcPresent: [buddyHolly._id.toString()]
+					});
+					park.save();
+					const docks = new Area({
+						name: "docks",
+						description: "The docks of Mitla. Many curious folks can be seen around here.",
+						type: "docks",
+						sessionPresent: [],
+						npcPresent: []
+					});
+					docks.save();
+					const mitla = new MapNode({
+						name: "Mitla",
+						areas: [park._id.toString(), docks._id.toString()],
+						north: null, 
+						south: null,
+						east:  null,
+						west:  null
+					});
+					mitla.save();
+					const map = new Map({
+						locations: [mitla._id.toString()]
+					})
+					map.save();
+				});
+			});
+		});
+	});
+
+
+  //generate an npc
+  //generate a few areas  
+  //generate a few map nodes
+  //generate base map
+  const map = new Map({
+    
+  })
+}
 
 
 
@@ -207,21 +274,17 @@ function handleResponse(message, session){
 			}
 			Player.findOne({'_id':session.turnQueue[0]}).exec().then(function(player){
 				message.channel.send("It is " + player.name +"'s turn");
-				session.conversationContext = "takeTurn";
+				session.turnStyle = "takeTurn";
+				session.conversationContext = "partyGreeted";
 				session.save();
+				console.log(session);
 			});
-			//would be nice now to wait for each player to speak, then continue when they have. 
-			//maybe add json to register set, key:value of player:bool (bool being whether or not
-			//they've talked yet - check on this until everyone has talked then move on)
-			//OR i could start working on turns here- add all players to an array of whose turn it
-			//is, and then have the bot tell the party whose turn it is to speak
-
 		}
 		else{
 			message.channel.send("return when you are ready.");
 		}
 	}
-	else if(session.conversationContext == "takeTurn"){
+	else if(session.turnStyle == "takeTurn"){
 		//need to have a handler in here that takes the input and reflects it into
 		//the world- for example, if the message is "attack elf", then I need to
 		//grab whatever player did that, check their stats, and then grab the elf
@@ -244,11 +307,17 @@ function handleResponse(message, session){
 				}
 			}
 			else{
-				message.channel.send("all done");
-				session.conversationContext = "";
+				message.channel.send("All turns complete.");
+				session.turnStyle = "";
+				//session.conversationContext = "";
 				session.save();
 			}
 		});
+	}
+	else if(session.conversationContext == "partyGreeted"){
+		message.channel.send("Having greeted each other, you are now in the cool place");
+		//at this point, i need to finish some section of the map, so that I can start adding them to
+		//the database and making them work dynamically - 
 	}
 	else if(session.conversationContext == ""){
 		
@@ -366,6 +435,7 @@ function handleInput(message, session){
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
+	generateMap();
 	//const Guilds = client.guilds.cache.map(guild => guild.id);
 	Session.find().exec().then(function (session){
 		for(var i=0;i<session.length;i++){
@@ -390,7 +460,8 @@ client.on('messageCreate', (message) => {
 						registerSet: [],
 						conversationContext: "",
 						currentTurn: null,
-						partyMembers: null
+						partyMembers: null,
+						turnStyle: ""
 					}).save();
 				}
 				else{
@@ -444,6 +515,7 @@ class Node {
 
 
 
+
 //store maps in database
 //
 //how will they look though??
@@ -456,8 +528,11 @@ const sessionSchema = Schema({
 	registerSet: [String],
 	conversationContext: String,
 	partyMembers: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
+	partyLocation: { type: Schema.Types.ObjectId, ref: 'MapNode' },
+	partyArea: { type: Schema.Types.ObjectId, ref: 'Area' },
 	currentTurn: { type: Schema.Types.ObjectId, ref: 'Player' },
 	turnQueue: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
+	turnStyle: String,
 	//inCombatWith? maybe not necessary - just check if it's in the same area
 	//
 });
@@ -470,13 +545,8 @@ const Player = mongoose.model("Player", {
   owner: String
 });
 
-const partySchema = Schema({
-	guild: String,
-	members: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
-});
-
 const npcSchema = Schema({
-	_id: Schema.Types.ObjectId,
+	//_id: Schema.Types.ObjectId,
 	name: String,
 	job: String,
 	level: Number,
@@ -491,33 +561,36 @@ const gameSchema = Schema({
 	partyLocation: { type: Schema.Types.ObjectId, ref: 'MapNode' }
 });
 	
-
-const buildingSchema = Schema({
-	name: String,
-	type: String,
-	patrons: { type: Schema.Types.ObjectId, ref: 'NPC' }
-});
-
 const mapNodeSchema = Schema({
   name: String,
-  buildings: [String],
+  areas: [{ type: Schema.Types.ObjectId, ref: 'Area' }],
   north: { type: Schema.Types.ObjectId, ref: 'MapNode' },
   south: { type: Schema.Types.ObjectId, ref: 'MapNode' },
   east:  { type: Schema.Types.ObjectId, ref: 'MapNode' },
   west:  { type: Schema.Types.ObjectId, ref: 'MapNode' }
 });
 
+const areaSchema = Schema({
+  name: String,
+  description: String,
+  type: String,
+  sessionsPresent: [{ type: Schema.Types.ObjectId, ref: 'Session' }],
+  npcPresent: [{ type: Schema.Types.ObjectId, ref: 'NPC' }]
+});
+
 const mapSchema = Schema({
 	locations: [{ type: Schema.Types.ObjectId, ref: 'MapNode' }]
 });
 
+
 const Session = mongoose.model("Session", sessionSchema);
-const Party = mongoose.model("Party", partySchema);
+//const Party = mongoose.model("Party", partySchema);
 const Game = mongoose.model("Game", gameSchema);
 const NPC = mongoose.model('NPC', npcSchema);
-const Building = mongoose.model('Building', buildingSchema);
+const Area = mongoose.model('Area', areaSchema);
 const MapNode = mongoose.model('MapNode', mapNodeSchema);
 const Map = mongoose.model("Map", mapSchema);
+
 
 /*const guy = new Player({
   name: "Mario Guy",
@@ -527,7 +600,3 @@ const Map = mongoose.model("Map", mapSchema);
 });*/
 
 //guy.save().then(() => console.log(Player.findOne({})));
-
-
-
-

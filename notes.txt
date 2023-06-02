@@ -176,3 +176,37 @@ cleaner - prevents multiple queries for information that should be consolidated.
 working on turns, soon it will be enemies and map - feel like I'm forgetting something
 design-wise... like in a few days I'll think 'shit, i should have done this THAT way..'.
 we'll see- hopefully I'm wrong.
+
+I want to have a guy called galley leo who when you talk to him a rest call is sent to 
+the nasa astronomy pic of the day and he shows it to the channel and is like look at this
+thing i discovered
+
+also- thinking about map nodes
+Major location - cities, or at least quadrants of cities. East ardoinge, for example
+minor locations- a major location contains multiple of these. East ardoigne might have,
+	for example, outskirts, cathedral, palace, slums.
+roads should be major locations as well- roads, crossroads, any area that appears on
+the map really.
+both major and minor locations should have a description, list of characters.
+maybe major locations should have a default 'common area' minor location- which the party arrives in first.
+it doesn't make sense to copy over all the fields that minor location needs to major locations
+when i could just have one more minor location and cover that.
+in that case, major locations will only REALLY need a list of minor locations, and
+a field for earch cardinal direction - indicating what major location that direction leads to.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~6/1/23
+Returning to this after a few days off- need to start considering maps
+first things first- make session hold partyLocation, as well as make the
+map nodes in the database to store info of what parties are at each node.
+I think that storing the data on both sides will make sense here, but I
+may need to reconsider- typically in database management this is a no-no,
+but i think it is important to be able to access the parties location from
+both the party level (bottom up) and map level (top down). Just need to
+make sure these stay in sync
+ - generating maps - should I do this in the index, or manually in mongo
+   
+
+as an aside- still need to figure out why it takes so long for the bot
+to say whose turn it is when entering turn mode. probably just some poor
+optimization
+
