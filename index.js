@@ -437,9 +437,15 @@ function handleInput(message, session){
 		}
 	  }
 	  else if(content.includes("!newGame")) {
-		session.conversationContext="newGame"
-		session.save();
-		message.channel.send("creating a new game. are all party members set?");
+		console.log(session);
+		if(!partyLocation){
+			session.conversationContext="newGame"
+			session.save();
+			message.channel.send("creating a new game. are all party members set?");
+		}
+		else{
+			message.channel.send("This party is already in a game.");
+		}
 	  }
 	  else if(content.includes("!newPlayer")) {
 	  	session.conversationContext = "newPlayerName"
@@ -679,10 +685,12 @@ const Player = mongoose.model("Player", {
 const npcSchema = Schema({
 	//_id: Schema.Types.ObjectId,
 	name: String,
+	description: String,
 	job: String,
 	level: Number,
 	maxHP: Number,
 	currentHP: Number
+
 });
 
 

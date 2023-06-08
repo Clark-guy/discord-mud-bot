@@ -250,3 +250,33 @@ I think the thing to do now is just ignore map nodes, don't delete
 the code or anything but just continue development without them until
 I need them again. I'll add NSEW to areas and add a "city" or prefecture
 string so I can keep em organized. Beyond that, we SHOULD be okay
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~6/8/23
+
+Movement works with the new area system- few things i want to do
+ - add "region" to each area, so that I can show party location on the map
+ - fill out map with areas, then fill with NPCs and dialogue.
+ - quests- should i call this something else?? maybe like.. tasks? idk. jobs?
+ - quest table with a list of quests on it
+ - on each session, have an array of questStatuses? or a new column on each 
+ 	session for each quest. this might need to be more complex than I'm 
+	making it, but it could be something like "quests: [0, 3, 5, 0]
+		0 is not started, and then you move through the numbers as you
+		progress in each quest maybe
+ - still want to move the map building to another file, but I can leave it 
+ alone for the time being- long as i remember to comment out the function
+ when I don't need to rebuild
+ - on the topic of map generation- maybe all relational directions should
+ be in the form of amendments, so as not to confuse?
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~6/9/23
+
+ I was thinking about it, maybe I should come up with a tool of some kind to 
+ make the area maps. It's going to be a little funky and redundant to manually
+ write in every location you can reach from every other location, this could
+ be done a lot easier in like, excel, where I can just use the columns and
+ rows to indicate an area. I wonder if I could even make the areas generate
+ procedurally this way- that woud be kind of cool actually... so that each
+ time I rebooted it looked a little different? This would take a while. I
+ should start smaller first- still, a tool to convert CSV into a map would be
+ very helpful...
