@@ -54,42 +54,89 @@ function generateMap(){
 					console.log(areas);
 					console.log(mapNodes);
 					console.log(maps);
+					
+					//NPCS
 					const buddyHolly = new NPC({
 						name:"Buddy Holly",
+						description:"Buddy Holly is hanging out with Mary Tyler Moore",
 						job: "guitarist",
 						level: 3,
 						maxHP: 10,
 						currentHP: 10
 					});
-					buddyHolly.save();
+					
+					//AREAS
 					const park = new Area({
 						name: "downtown park",
 						description: "A charming little park in the center of downtown Mitla.",
 						type: "park",
+						region: "mitla",
 						sessionPresent: [],
-						npcPresent: [buddyHolly._id.toString()]
+						npcPresent: [buddyHolly._id.toString()],
+						north: null, 
+						south: null, 
+						east:  null,
+						west:  null
 					});
-					park.save();
 					const docks = new Area({
 						name: "docks",
 						description: "The docks of Mitla. Many curious folks can be seen around here.",
 						type: "docks",
+						region: "mitla",
 						sessionPresent: [],
-						npcPresent: []
+						npcPresent: [],
+						north: park._id.toString(), 
+						south: null, 
+						east:  null,
+						west:  null
 					});
-					docks.save();
+					const crossroadMain = new Area({
+						name: "crossroads",
+						description: "A major intersection. To the south lies Mitla",
+						type: "road",
+						region: "unaligned",
+						sessionPresent: [],
+						npcPresent: [],
+						north: null, 
+						south: null, 
+						east:  null,
+						west:  null
+					});
+
+					//MAPNODES
+					const crossroads = new MapNode({
+						name: "Crossroads",
+						areas: [crossroadMain._id.toString()],
+						north: null, 
+						south: null, 
+						east:  null,
+						west:  null
+					});
 					const mitla = new MapNode({
 						name: "Mitla",
 						areas: [park._id.toString(), docks._id.toString()],
-						north: null, 
+						north: crossroads._id.toString(), 
 						south: null,
 						east:  null,
 						west:  null
 					});
-					mitla.save();
+					
+					//MAP
 					const map = new Map({
 						locations: [mitla._id.toString()]
 					})
+
+					//AMENDMENTS
+					crossroads.south = mitla._id.toString(),
+					park.south = docks._id.toString(),
+
+					//SAVES
+					buddyHolly.save();
+					park.save();
+					docks.save();
+					crossroadMain.save();
+					crossroads.save();
+					mitla.save();
 					map.save();
 				});
 			});
@@ -101,9 +148,6 @@ function generateMap(){
   //generate a few areas  
   //generate a few map nodes
   //generate base map
-  const map = new Map({
-    
-  })
 }
 
 
@@ -277,7 +321,6 @@ function handleResponse(message, session){
 				session.turnStyle = "takeTurn";
 				session.conversationContext = "partyGreeted";
 				session.save();
-				console.log(session);
 			});
 		}
 		else{
@@ -309,13 +352,22 @@ function handleResponse(message, session){
 			else{
 				message.channel.send("All turns complete.");
 				session.turnStyle = "";
-				//session.conversationContext = "";
-				session.save();
+				session.conversationContext = "partyGreeted";
+				handleResponse(message, session);
+				//session.save();
 			}
 		});
 	}
 	else if(session.conversationContext == "partyGreeted"){
 		message.channel.send("Having greeted each other, you are now in the cool place");
+		Area.findOne({'name':'docks'}).exec().then(function(docks){
+			session.partyLocation = docks;
+			session.conversationContext = "";
+			session.save();
+			console.log(docks);
+			console.log("this seems to work...");
+			console.log(session);
+		});
 		//at this point, i need to finish some section of the map, so that I can start adding them to
 		//the database and making them work dynamically - 
 	}
@@ -345,7 +397,6 @@ function handleInput(message, session){
 			message.channel.send("Party deleted.");	
 		}
 	  }
-
 	  else if(content.includes("!partyStatus")) {
 		if(!session.partyMembers){
 			message.channel.send("Server does not have a party initialized. initialize now?");
@@ -424,6 +475,84 @@ function handleInput(message, session){
 			message.channel.send('```\n' + data + '```');
 		});
 	  }
+	  else if(content.includes("look")){
+		Area.findOne({"_id":session.partyLocation}).exec().then(function(view){
+			message.channel.send(view.description);
+			if(view.npcPresent){
+				console.log(view.npcPresent);
+				for(var i=0;i<view.npcPresent.length;i++){
+					NPC.findOne({"_id":view.npcPresent[i]}).exec().then(function(npc){
+						message.channel.send("You see " + npc.name + " nearby.");
+					});
+				}
+			}
+			if(view.north){
+				Area.findOne({"_id":view.north}).exec().then(function(north){
+					message.channel.send("To the north you see " + north.name);
+				});
+			}
+			if(view.east){
+				Area.findOne({"_id":view.east}).exec().then(function(east){
+					message.channel.send("To the east you see " + east.name);
+				});
+			}
+			if(view.south){
+				Area.findOne({"_id":view.south}).exec().then(function(south){
+					message.channel.send("To the south you see " + south.name);
+				});
+			}
+			if(view.west){
+				Area.findOne({"_id":view.west}).exec().then(function(west){
+					message.channel.send("To the west you see " + west.name);
+				});
+			}
+		});
+	  }
+	  else if(content.startsWith("go") || content.startsWith("move")){
+	  	//message.channel.send("moving");
+		Area.findOne({"_id":session.partyLocation}).exec().then(function(view){
+			if(content.includes("north") || content.includes("go n")){
+				if(view.north){
+					session.partyLocation = view.north;
+					session.save();
+					message.channel.send("Your party moves north.");
+				}
+				else{
+					message.channel.send("You are unable to move that way.");
+				}
+			}
+			if(content.includes("south") || content.includes("go s")){
+				if(view.south){
+					session.partyLocation = view.south;
+					session.save();
+					message.channel.send("Your party moves south.");
+				}
+				else{
+					message.channel.send("You are unable to move that way.");
+				}
+			}
+			if(content.includes("east") || content.includes("go e")){
+				if(view.east){
+					session.partyLocation = view.east;
+					session.save();
+					message.channel.send("Your party moves east.");
+				}
+				else{
+					message.channel.send("You are unable to move that way.");
+				}
+			}
+			if(content.includes("west") || content.includes("go w")){
+				if(view.west){
+					session.partyLocation = view.west;
+					session.save();
+					message.channel.send("Your party moves west.");
+				}
+				else{
+					message.channel.send("You are unable to move that way.");
+				}
+			}
+		});
+	  }
   }
 	else{
 		//how to handle response?
@@ -435,7 +564,7 @@ function handleInput(message, session){
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
-	generateMap();
+	//generateMap();
 	//const Guilds = client.guilds.cache.map(guild => guild.id);
 	Session.find().exec().then(function (session){
 		for(var i=0;i<session.length;i++){
@@ -454,6 +583,7 @@ client.on('messageCreate', (message) => {
 			//var sessionQuery = Session.findOne({'guild': message.guildId}).exec().then(function (sessions){
 				//if no session has been made, create new session
 				if(!session){
+					//need to set partyLocation to docks
 					new Session({
 						guild: message.guildId,
 						botEnabled: true,
@@ -461,7 +591,8 @@ client.on('messageCreate', (message) => {
 						conversationContext: "",
 						currentTurn: null,
 						partyMembers: null,
-						turnStyle: ""
+						turnStyle: "",
+						partyLocation: null
 					}).save();
 				}
 				else{
@@ -574,8 +705,13 @@ const areaSchema = Schema({
   name: String,
   description: String,
   type: String,
+  region: String,
   sessionsPresent: [{ type: Schema.Types.ObjectId, ref: 'Session' }],
-  npcPresent: [{ type: Schema.Types.ObjectId, ref: 'NPC' }]
+  npcPresent: [{ type: Schema.Types.ObjectId, ref: 'NPC' }],
+  north: { type: Schema.Types.ObjectId, ref: 'Area' },
+  south: { type: Schema.Types.ObjectId, ref: 'Area' },
+  east:  { type: Schema.Types.ObjectId, ref: 'Area' },
+  west:  { type: Schema.Types.ObjectId, ref: 'Area' },
 });
 
 const mapSchema = Schema({
@@ -588,7 +724,7 @@ const Session = mongoose.model("Session", sessionSchema);
 const Game = mongoose.model("Game", gameSchema);
 const NPC = mongoose.model('NPC', npcSchema);
 const Area = mongoose.model('Area', areaSchema);
-const MapNode = mongoose.model('MapNode', mapNodeSchema);
+const MapNode = mongoose.model('MapNode', mapNodeSchema); //huh???
 const Map = mongoose.model("Map", mapSchema);
 
 
