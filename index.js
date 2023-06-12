@@ -24,10 +24,26 @@ const clericEffects = {
 	luck: 3,
 	perception: 0
 }
+const validCommands = ["look", "examine", "observe", "view", 
+				"move", "go", "walk", "run",
+				"attack", "hit", "shoot",
+				"talk", "speak"];
+const prepositions = ["at", "to", "on", "in", "with"];
+const generalArea = ["around", "area"];
+const babbleLines = ["You speak amongst your party",
+					"You babble incoherently",
+					"You begin talking to yourself. How worrying."];
 
 //////////////UTILITY FUNCTIONS/////////////
+
+function randInt(min, max){
+	max+=1;
+	return Math.floor(min + (Math.random() * (max - min)));
+}
+
 //in general - 0 is yes, 1 is no
 function yesNo(message){
+	message = message.toLowerCase();
 	return message.startsWith('y') || message.startsWith('0');
 }
 
@@ -44,112 +60,29 @@ function getParty(session){
 	});
 };
 
-function generateMap(){
-	//Delete all npcs, areas, map nodes, maps
-	NPC.deleteMany({}).then(function(npcs){
-		Area.deleteMany({}).then(function(areas){
-			MapNode.deleteMany({}).then(function(mapNodes){
-				Map.deleteMany({}).then(function(maps){
-					console.log(npcs);
-					console.log(areas);
-					console.log(mapNodes);
-					console.log(maps);
-					
-					//NPCS
-					const buddyHolly = new NPC({
-						name:"Buddy Holly",
-						description:"Buddy Holly is hanging out with Mary Tyler Moore",
-						job: "guitarist",
-						level: 3,
-						maxHP: 10,
-						currentHP: 10
-					});
-					
-					//AREAS
-					const park = new Area({
-						name: "downtown park",
-						description: "A charming little park in the center of downtown Mitla.",
-						type: "park",
-						region: "mitla",
-						sessionPresent: [],
-						npcPresent: [buddyHolly._id.toString()],
-						north: null, 
-						south: null, 
-						east:  null,
-						west:  null
-					});
-					const docks = new Area({
-						name: "docks",
-						description: "The docks of Mitla. Many curious folks can be seen around here.",
-						type: "docks",
-						region: "mitla",
-						sessionPresent: [],
-						npcPresent: [],
-						north: park._id.toString(), 
-						south: null, 
-						east:  null,
-						west:  null
-					});
-					const crossroadMain = new Area({
-						name: "crossroads",
-						description: "A major intersection. To the south lies Mitla",
-						type: "road",
-						region: "unaligned",
-						sessionPresent: [],
-						npcPresent: [],
-						north: null, 
-						south: null, 
-						east:  null,
-						west:  null
-					});
-
-					//MAPNODES
-					const crossroads = new MapNode({
-						name: "Crossroads",
-						areas: [crossroadMain._id.toString()],
-						north: null, 
-						south: null, 
-						east:  null,
-						west:  null
-					});
-					const mitla = new MapNode({
-						name: "Mitla",
-						areas: [park._id.toString(), docks._id.toString()],
-						north: crossroads._id.toString(), 
-						south: null,
-						east:  null,
-						west:  null
-					});
-					
-					//MAP
-					const map = new Map({
-						locations: [mitla._id.toString()]
-					})
-
-					//AMENDMENTS
-					crossroads.south = mitla._id.toString(),
-					park.south = docks._id.toString(),
-
-					//SAVES
-					buddyHolly.save();
-					park.save();
-					docks.save();
-					crossroadMain.save();
-					crossroads.save();
-					mitla.save();
-					map.save();
-				});
-			});
-		});
-	});
-
-
-  //generate an npc
-  //generate a few areas  
-  //generate a few map nodes
-  //generate base map
+function commandParser(content){
+	var commandInfo = {};
+	var contentArr = content.split(" ");
+	contentArr = contentArr.map(word => word.toLowerCase());
+	//start with command- ensure it is a real command. if not, return issue
+	if(!validCommands.includes(contentArr[0])){
+		commandInfo.command = "";
+		commandInfo.target = "";
+		console.log("command not understood");
+		return commandInfo;
+	}
+	commandInfo.command = contentArr[0];
+	//check second item in array
+	// - if second item is a preposition, third is object
+	// - otherwise second item is obj
+	//MAYBE with is not good to be here? could lead to confusion (e.g. "attack with friend" results in "attack friend"
+	var targetIndex;
+	targetIndex = prepositions.includes(contentArr[1]) ? 2 : 1;
+	
+	//set target to general if target is not specific
+	commandInfo.target = (!contentArr[targetIndex] || generalArea.includes(contentArr[targetIndex])) ? "general" : contentArr[targetIndex];
+	return commandInfo;
 }
-
 
 
 //////////////EVENT HANDLING//////////////////
@@ -377,8 +310,10 @@ function handleResponse(message, session){
 }
 
 
+
+
 function handleInput(message, session){
-  content = message.content
+  content = message.content.toLowerCase();
   if(session.conversationContext==""){
 	  if(content.includes("!exit")) {
 		session.botEnabled = false;
@@ -438,7 +373,7 @@ function handleInput(message, session){
 	  }
 	  else if(content.includes("!newGame")) {
 		console.log(session);
-		if(!partyLocation){
+		if(!session.partyLocation){
 			session.conversationContext="newGame"
 			session.save();
 			message.channel.send("creating a new game. are all party members set?");
@@ -481,82 +416,109 @@ function handleInput(message, session){
 			message.channel.send('```\n' + data + '```');
 		});
 	  }
-	  else if(content.includes("look")){
+
+	  //else if(content.startsWith("look")){
+	  else if(validCommands.includes(content.split(" ")[0])){
+	  	//need to determine what the player was looking at
+		//command parser function - splits command into words, finds command, subject, extras
+		var commandInfo = commandParser(content);
 		Area.findOne({"_id":session.partyLocation}).exec().then(function(view){
-			message.channel.send(view.description);
-			if(view.npcPresent){
-				console.log(view.npcPresent);
-				for(var i=0;i<view.npcPresent.length;i++){
-					NPC.findOne({"_id":view.npcPresent[i]}).exec().then(function(npc){
-						message.channel.send("You see " + npc.name + " nearby.");
+			if(commandInfo.command == "look" && commandInfo.target == "general"){
+				message.channel.send(view.description);
+				if(view.npcPresent){
+					console.log(view.npcPresent);
+					for(var i=0;i<view.npcPresent.length;i++){
+						NPC.findOne({"_id":view.npcPresent[i]}).exec().then(function(npc){
+							message.channel.send("You see " + npc.name + " nearby.");
+						});
+					}
+				}
+				if(view.north){
+					Area.findOne({"_id":view.north}).exec().then(function(north){
+						message.channel.send("To the north you see " + north.name);
+					});
+				}
+				if(view.east){
+					Area.findOne({"_id":view.east}).exec().then(function(east){
+						message.channel.send("To the east you see " + east.name);
+					});
+				}
+				if(view.south){
+					Area.findOne({"_id":view.south}).exec().then(function(south){
+						message.channel.send("To the south you see " + south.name);
+					});
+				}
+				if(view.west){
+					Area.findOne({"_id":view.west}).exec().then(function(west){
+						message.channel.send("To the west you see " + west.name);
 					});
 				}
 			}
-			if(view.north){
-				Area.findOne({"_id":view.north}).exec().then(function(north){
-					message.channel.send("To the north you see " + north.name);
-				});
+			if(commandInfo.command == "talk" || commandInfo.command == "speak"){
+				//need to ensure message goes to all sessions in same area
+				//query sessions on partyLocation = 
+				//should I lock the bot to one channel for each server??
+				//then I could add the channel to session
+				//and then use session to send the message
+				//MAYBE when they enable the bot, save the channel they used
+				//to do so in session? So wherever they enable the bot is where they
+				//will get updates?
+				//THIS is a good idea I'm thinking. give it some more thought and revisit tomorrow
+				console.log("view" + view)
+				console.log("session"+session)
+				console.log("message.channel"+message.channel);
+				console.log("commandInfo"+commandInfo);
+				if(commandInfo.target == "general"){
+					message.channel.send(babbleLines[randInt(0,2)]);
+				}
 			}
-			if(view.east){
-				Area.findOne({"_id":view.east}).exec().then(function(east){
-					message.channel.send("To the east you see " + east.name);
-				});
-			}
-			if(view.south){
-				Area.findOne({"_id":view.south}).exec().then(function(south){
-					message.channel.send("To the south you see " + south.name);
-				});
-			}
-			if(view.west){
-				Area.findOne({"_id":view.west}).exec().then(function(west){
-					message.channel.send("To the west you see " + west.name);
-				});
+			if(commandInfo.command == "move" || commandInfo.command == "go"){
+				if(content.includes("north") || content.includes("go n")){
+					if(view.north){
+						session.partyLocation = view.north;
+						session.save();
+						message.channel.send("Your party moves north.");
+					}
+					else{
+						message.channel.send("You are unable to move that way.");
+					}
+				}
+				if(content.includes("south") || content.includes("go s")){
+					if(view.south){
+						session.partyLocation = view.south;
+						session.save();
+						message.channel.send("Your party moves south.");
+					}
+					else{
+						message.channel.send("You are unable to move that way.");
+					}
+				}
+				if(content.includes("east") || content.includes("go e")){
+					if(view.east){
+						session.partyLocation = view.east;
+						session.save();
+						message.channel.send("Your party moves east.");
+					}
+					else{
+						message.channel.send("You are unable to move that way.");
+					}
+				}
+				if(content.includes("west") || content.includes("go w")){
+					if(view.west){
+						session.partyLocation = view.west;
+						session.save();
+						message.channel.send("Your party moves west.");
+					}
+					else{
+						message.channel.send("You are unable to move that way.");
+					}
+				}
 			}
 		});
 	  }
 	  else if(content.startsWith("go") || content.startsWith("move")){
 	  	//message.channel.send("moving");
 		Area.findOne({"_id":session.partyLocation}).exec().then(function(view){
-			if(content.includes("north") || content.includes("go n")){
-				if(view.north){
-					session.partyLocation = view.north;
-					session.save();
-					message.channel.send("Your party moves north.");
-				}
-				else{
-					message.channel.send("You are unable to move that way.");
-				}
-			}
-			if(content.includes("south") || content.includes("go s")){
-				if(view.south){
-					session.partyLocation = view.south;
-					session.save();
-					message.channel.send("Your party moves south.");
-				}
-				else{
-					message.channel.send("You are unable to move that way.");
-				}
-			}
-			if(content.includes("east") || content.includes("go e")){
-				if(view.east){
-					session.partyLocation = view.east;
-					session.save();
-					message.channel.send("Your party moves east.");
-				}
-				else{
-					message.channel.send("You are unable to move that way.");
-				}
-			}
-			if(content.includes("west") || content.includes("go w")){
-				if(view.west){
-					session.partyLocation = view.west;
-					session.save();
-					message.channel.send("Your party moves west.");
-				}
-				else{
-					message.channel.send("You are unable to move that way.");
-				}
-			}
 		});
 	  }
   }
@@ -570,7 +532,6 @@ function handleInput(message, session){
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
-	//generateMap();
 	//const Guilds = client.guilds.cache.map(guild => guild.id);
 	Session.find().exec().then(function (session){
 		for(var i=0;i<session.length;i++){

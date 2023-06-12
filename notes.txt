@@ -280,3 +280,16 @@ Movement works with the new area system- few things i want to do
  time I rebooted it looked a little different? This would take a while. I
  should start smaller first- still, a tool to convert CSV into a map would be
  very helpful...
+
+ also- should i have a blurb of text for each area that appears the first time 
+ the party arrives in an area, to introduce them? Maybe... maybe this should
+ be more of an "initiate quest" thing.. e.g. first time they arrive at the
+ docks, new quest starts and the bot is like "some guy walks up to you and
+ gives you a quest" but more interesting blurb
+
+ Also, want to figure out how to talk to groups of people at once, rather
+ than only being able to talk to one person at a time.
+
+
+~~~~~~~
+neeed to make sure talking sends to all sessions in area
