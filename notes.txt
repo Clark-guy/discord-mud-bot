@@ -302,3 +302,38 @@ I guess I can split first by say VS talk / speak
 
 
 for all npcs, have a list of recognized names
+
+
+
+`~~~~~~~~~~~~~~~~~~~~~~6/30/23
+woopsie haven't been here for a bit
+I think I need to come up with a timeline so this gets done. I had talked to
+noah about this a little bit ago- but haven't seriously worked on one until now.
+How about this-
+
+Functional DEMO by the end of next month.
+July starts tomorrow, so let's split it into 4 weeks, with a few extra days
+at the end for buffer
+
+1. - due July 7
+First thing I should probably do is finish the map- both design and generation
+that can be week 1
+
+2. - due July 14
+Then, populate with NPCs. A week may be a little long for this, but I want to
+not rush myself on this part and give people real depth, e.g. simple story
+complex characters
+
+3. - due July 25
+then I can do a single quest or storyline, as well as finish programming how 
+exactly dialogue works. This may take about a week and a half, leaving a few 
+days before buffer period.
+
+4. - Due end of the month (July 31)
+I can dedicate the last week for buffer. unforseen issues and significant
+programmatic changes will take this time. If I have extra time at the end here, 
+work on linking parties who are in the same area so I can talk across servers.
+
+
+
+
