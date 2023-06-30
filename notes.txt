@@ -292,4 +292,13 @@ Movement works with the new area system- few things i want to do
 
 
 ~~~~~~~
-neeed to make sure talking sends to all sessions in area
+need to make sure talking sends to all sessions in area
+Also- how to talk to NPC vs general chat???
+e.g. there is an npc nearby named Bill McEpic
+person says "talk to bill" or "speak with bill" or "talk bill McEpic"
+	- talk to bill
+person says "say hello"
+I guess I can split first by say VS talk / speak
+
+
+for all npcs, have a list of recognized names

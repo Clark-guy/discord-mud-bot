@@ -2,6 +2,8 @@
 const { Client, GatewayIntentBits } = require('discord.js')
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+
+//TODO: Review intents and see if I can pull any of these
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -27,7 +29,8 @@ const clericEffects = {
 const validCommands = ["look", "examine", "observe", "view", 
 				"move", "go", "walk", "run",
 				"attack", "hit", "shoot",
-				"talk", "speak"];
+				"talk", "speak",
+				"say"];
 const prepositions = ["at", "to", "on", "in", "with"];
 const generalArea = ["around", "area"];
 const babbleLines = ["You speak amongst your party",
@@ -35,6 +38,11 @@ const babbleLines = ["You speak amongst your party",
 					"You begin talking to yourself. How worrying."];
 
 //////////////UTILITY FUNCTIONS/////////////
+
+function arrayEmpty(arr){
+	return arr == undefined || arr.length == 0;
+}
+
 
 function randInt(min, max){
 	max+=1;
@@ -218,12 +226,12 @@ function handleResponse(message, session){
 		});
 	}
 	else if(session.conversationContext == "newGame"){
-		if(yesNo(message.content)){
+		if(yesNo(message.content) && !arrayEmpty(session.partyMembers)){
 			//i may need to hold more information about the party in order to make
 			//informed dialogue in the future.
 			message.channel.send("beginning your adventure...");
 			//denote the time period - setting. explain how your party met, and how they came to arrive where they did
-			message.channel.send("Pale blue, running along an unwavering line of deep blue. In nature, perfect geometric figures are quite rare, " +
+			/*message.channel.send("Pale blue, running along an unwavering line of deep blue. In nature, perfect geometric figures are quite rare, " +
 				"and so you and your party spend many hours of the day watching it. The colors of each blend from their respective " +
 				"blues to brilliant yellows, reds, and finally black- all the while respecting the boundary drawn between them that " +
 				"you call the horizon. What a point that is, indeed- the edge of what is tangible, beyond which is everything else. " +
@@ -239,7 +247,8 @@ function handleResponse(message, session){
 			message.channel.send("\n'LAND!' Shouts the lookout, rousing the crew. Your party, not being directly involved in " + 
 				"the ship's navigation, begin preparing for landing in this strange land. You gather around a table to discuss what you " +
 				"will be doing upon arrival."
-			);
+			);*/
+			message.channel.send("[intro blurb here]");
 			message.channel.send("'Who are you again??' you ask to one of your party members. in fact, you can't remember any of "+
 				"them. While absurd and illogical, it is the truth- after months at sea together, none of you can remember a thing " + 
 				"about each other. Perhaps you should all introduce yourselves and explain your backgrounds. (will continue when all " +
@@ -258,7 +267,14 @@ function handleResponse(message, session){
 		}
 		else{
 			message.channel.send("return when you are ready.");
+			session.conversationContext = "";
+			session.save();
 		}
+	}
+	else if(session.conversationContext == "buddy"){
+		message.channel.send("hey, it's me buddy! how are you today??");
+		session.conversationContext = "";
+		session.save();
 	}
 	else if(session.turnStyle == "takeTurn"){
 		//need to have a handler in here that takes the input and reflects it into
@@ -313,10 +329,11 @@ function handleResponse(message, session){
 
 
 function handleInput(message, session){
-  content = message.content.toLowerCase();
+  content = message.content;//.toLowerCase();
   if(session.conversationContext==""){
 	  if(content.includes("!exit")) {
 		session.botEnabled = false;
+		session.channel = "";
 		session.save();
 		message.channel.send("Bot disabled");
 	  }
@@ -333,6 +350,7 @@ function handleInput(message, session){
 		}
 	  }
 	  else if(content.includes("!partyStatus")) {
+	  	console.log("here");
 		if(!session.partyMembers){
 			message.channel.send("Server does not have a party initialized. initialize now?");
 			session.conversationContext = "createParty";
@@ -407,6 +425,12 @@ function handleInput(message, session){
 				"!removePlayer - remove a player from party\n" +
 				"!newGame - lock in players and begin\n" +
 				"!map - show map\n" +
+				"\nGAME COMMANDS\n" + 
+				"look - have the party take a looksie around\n"+
+				"walk (direction) - move the party in a direction, if possible. Accepts cardinal directions.\n"+
+				"hit (target) - attack something\n"+
+				"talk to (target) - speak to a person or creature\n"+
+				"say (text) - speak to other parties in the area\n"+
 				""});
 	  }
 	  else if(content.startsWith("!map")){
@@ -417,8 +441,9 @@ function handleInput(message, session){
 		});
 	  }
 
-	  //else if(content.startsWith("look")){
-	  else if(validCommands.includes(content.split(" ")[0])){
+		//This logic needs to be broken into multiple functions
+	  else if(validCommands.includes(content.split(" ")[0]) && session.partyLocation){
+	    console.log(session.partyLocation);
 	  	//need to determine what the player was looking at
 		//command parser function - splits command into words, finds command, subject, extras
 		var commandInfo = commandParser(content);
@@ -471,6 +496,47 @@ function handleInput(message, session){
 				if(commandInfo.target == "general"){
 					message.channel.send(babbleLines[randInt(0,2)]);
 				}
+				else{
+					//handle dialogue with target
+					//set conversationContext to the person's name and handle from there??
+					//maybe combine target and the sessions state with that character
+					//this allows for continuing dialogue with parties, linking each NPC to
+					//session for use in quests n such
+					//e.g.
+					// conversationContext = target + session.target_state
+					
+					//this isn't a great idea i don't think- why not just have a conversationContext for
+					//talking to ANYONE, and then add a new session variable for target that gets set.
+					//then, I can enter a SINGLE convCont, query for target and quest status and
+					//what part of the conversation we're in, etc, not have a ton more code and put
+					//the weight on the database. this especially will prevent issues where fucking ummm
+					//I don't wanna write a whole function for every person who needs to be spoken to
+					//that seems kinda stupid
+					session.conversationContext = commandInfo.target;
+					
+					//NOTE TO SELF:: DO NOT CODE DEBT MYSELF INTO A CORNER WHERE THE NPCS ARE LOCKED
+					//TO A SINGLE LOCATION BECAUSE OF THIS!!!
+					//session.save();
+					handleInput(message, session);
+				}
+			}
+			if(commandInfo.command == "say"){
+				Session.find().exec().then(function(sessions){
+					for(var i=0;i<sessions.length;i++){
+						var channelId = (sessions[i].channel.substring(2, sessions[i].channel.length-1));
+						console.log(channelId);
+						//var channel = client.channels.cache.get(channelId);
+						var channel = client.channels.fetch(channelId);
+						if(channel){
+							console.log(channel);
+							//channel.send("test");
+						}
+					}
+				});
+			}
+			if(commandInfo.command == "attack"){
+				//need a util function to get message sender
+				console.log("attacking " + commandInfo.target);
 			}
 			if(commandInfo.command == "move" || commandInfo.command == "go"){
 				if(content.includes("north") || content.includes("go n")){
@@ -536,6 +602,7 @@ client.on('ready', () => {
 	Session.find().exec().then(function (session){
 		for(var i=0;i<session.length;i++){
 			session[i].botEnabled = false;
+			session[i].channel = "";
 			session[i].conversationContext = "";
 			session[i].registerSet = [];
 			session[i].save();
@@ -549,6 +616,7 @@ client.on('messageCreate', (message) => {
 		if (message.content == "!enableBot" && message.author.bot == false){
 			//var sessionQuery = Session.findOne({'guild': message.guildId}).exec().then(function (sessions){
 				//if no session has been made, create new session
+				message.channel.send("Bot enabled");
 				if(!session){
 					//need to set partyLocation to docks
 					new Session({
@@ -564,13 +632,13 @@ client.on('messageCreate', (message) => {
 				}
 				else{
 					session.botEnabled = true;
+					session.channel = message.channel;
 					if(!session.partyMembers){
 						message.channel.send("Server does not have a party initialized. initialize now?");
 						session.conversationContext = "createParty";
 					}
 					session.save();
 				}
-				message.channel.send("Bot enabled");
 			//});
 		}
 		else if (session.botEnabled == true && message.author.bot == false){
@@ -623,6 +691,7 @@ class Node {
 const sessionSchema = Schema({
 	guild: String,
 	botEnabled: Boolean,
+	channel: String,
 	registerSet: [String],
 	conversationContext: String,
 	partyMembers: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
