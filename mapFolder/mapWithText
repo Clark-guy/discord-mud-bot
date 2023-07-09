@@ -1,7 +1,7 @@
 ____Key____________
 } A - Mountain    {
 } O - Lake        {
-} * - City/town   {
+} 3 - City/town   {
 } X - Capital     {
 } f - Trees       {
 } V - Volcano     {
@@ -18,8 +18,8 @@ __   /  \       _/  \_/ \   /      \    ^^'  ^^  |
   \_/    \ ^^__/        /   \       \__    __    |
 ,,       /  /          /     \         \  /  \   |
  ',      \ /           \  ^^ /          \ \   \  |
-  ',      \\            \___/*, ,       / /   /  |
-\_  ',',   \\           *' ,'  ' ',    / /    \  |
+  ',      \\            \___/8, ,       / /   /  |
+\_  ',',   \\           7' ,'  ' ',    / /    \  |
   \     ',',==0`,`,    ,`        ',    \/      \ |
   /         //    ,`  ,`         ',             \|
  /          \\     `,,`    5      ,``,3,`,       |
@@ -62,11 +62,17 @@ Land marks indicated with a number followed by a "."
 0. - Nacho Canal
         This canal serves as a crucial trade route through the
 		Dilbeseanic region.
-1. - Ciudad de Mitla
+1. - Ciudad Mitla
 		The largest city in the region, as well as a central
 		trade hub. 
-2. - Cliffs
+2. - Cliffs of Dozer
 3. - Anaya Pass (Sierra mariposas) (butterfly mountain)
 4. - Camp Eagle
 5. - bosque nublado (cloud forest)
 6. - Huitepec (Volcano)
+7. - Eris
+8. - Dysnomia
+
+
+
+
