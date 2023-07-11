@@ -29,9 +29,9 @@ def main():
 
 	mb0 = Menubutton(menuFrame, text="File",relief=FLAT)
 	fileButton = Menu(mb0,tearoff=0)
-	fileButton.add_command(label="New", command=main)
+	fileButton.add_command(label="New", command=lambda: newMap())
 	fileButton.add_command(label="Save", command=lambda: saveFile())
-	fileButton.add_command(label="Load", command=lambda: loadFile(dictGrid))
+	fileButton.add_command(label="Load", command=lambda: loadFile())
 	fileButton.add_command(label="Exit", command=root.destroy)
 
 	mb1 = Menubutton(menuFrame, text="Edit",relief=FLAT)
@@ -60,25 +60,49 @@ def main():
 			print(grid[x])
 		print("\n")
 
+	def newMap():
+		global dictGrid
+		global guiFrame
+		dictGrid=[]
+		guiFrame.destroy()
+		guiFrame = Frame(root)
+		guiFrame.pack()
+		genGrid(root)
+
 	def completeSave(window,fileName): 
 		with open(fileName.get() + '.txt', 'w') as file:
 			file.write(str(dictGrid))
 		window.destroy()
 	def saveFile():
-		window = Toplevel()
-		window.geometry('300x70')
-		Label(window, text="Save file as?").pack(anchor=W)
-		fileName=StringVar()
-		Entry(window, textvariable=fileName).pack()
-		saveButt = Button(window, text="Save", command=lambda window=window, fileName=fileName:completeSave(window, fileName)).pack()
+		global dictGrid
+		#window = Toplevel()
+		#window.geometry('300x70')
+		#Label(window, text="Save file as?").pack(anchor=W)
+		#fileName=StringVar()
+		#Entry(window, textvariable=fileName).pack()
+		#saveButt = Button(window, text="Save", command=lambda window=window, fileName=fileName:completeSave(window, fileName)).pack()
+		filename = filedialog.asksaveasfile(mode='w', initialdir= ".", defaultextension='.txt',
+											title = "Select a File",
+											filetypes = (("Text Files",
+														"*.txt"),
+														("all files",
+														"*.*")))
+		if filename is None:
+			return
+		#with open(filename.get() + '.txt', 'w') as file:
+		filename.write(str(dictGrid))
+		filename.close()
 
-	def loadFile(dictGrid):
+	def loadFile():
+		global dictGrid
 		filename = filedialog.askopenfilename(initialdir= ".",
 											title = "Select a File",
 											filetypes = (("Text Files",
 														"*.txt"),
 														("all files",
 														"*.*")))
+		if filename is None or filename is '':
+			return
 		#print(filename)
 		with open(filename, 'r') as file:
 			content = file.read()
@@ -88,8 +112,9 @@ def main():
 			GRID_SIZE=len(dictGrid[0]) #changing value of constant- fix this once this is working
 			print("from load function")
 			printGrid(dictGrid)
-			genGrid(root, guiFrame, dictGrid)
+			genGrid(root)
 			return dictGrid
+			file.close()
 
 
 	def saveArea(vDict,window,btn, x,y):
@@ -101,6 +126,7 @@ def main():
 		dictGrid[x][y]["region"] = vDict["rv"].get()
 
 	def openArea(btn, x, y):
+		global dictGrid
 		window = Toplevel()
 		window.geometry('200x200')
 		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
@@ -138,9 +164,11 @@ def main():
 	#add logic here to generate underlying python dict which stores all the values as well
 	#don't want to just read through buttons, because they may have other text stored as
 	#well as not store the full information (long descriptions, etc) 
-	def genGrid(root, guiFrame, dictGrid):
+	def genGrid(root):
 		#2 scenarios - dictGrid is empty, just launched - generate
 		#otherwise, dictGrid exists, loading file- need to read what's in it and gen from that
+		global dictGrid
+		global guiFrame
 
 		if(dictGrid==[]):
 			print("here")
@@ -155,7 +183,6 @@ def main():
 					btn.grid(column=y,row=x)
 					btn["command"]=lambda btn=btn, x=x, y=y:openArea(btn, x, y)
 		else:
-			global dictGrid
 			print("there")
 			guiFrame.destroy()
 			guiFrame = Frame(root)
@@ -174,9 +201,9 @@ def main():
 					btn["command"]=lambda btn=btn, x=x, y=y:openArea(btn, x, y)
 		printGrid(dictGrid)
 	
-		return guiFrame, dictGrid
+		#return guiFrame, dictGrid
 
-	guiFrame, dictGrid = genGrid(root, guiFrame, [])
+	genGrid(root)
 	printGrid(dictGrid)
 	root.mainloop()
 
