@@ -1,25 +1,29 @@
 import tkinter as tk
+import json
 from tkinter import ttk
 from tkinter import *
+from tkinter import filedialog
+
+###### SETUP / WINDOW CREATION 
+root = tk.Tk()
+root.title("map maker")
+root.resizable(0, 0)
+bgColors = ["grey","lightgrey"]
+### Make frames and pack to root
+menuFrame=Frame(root)
+menuFrame.pack(anchor=W)
+### Constants / Global Vars
+GRID_SIZE = 5
+#These Area types will eventually lead to combat modifiers
+AREA_TYPES = ["plains", "road", "city", "building", "waterfront", "other"] #plains, road, city, building, waterfront
+REGIONS = ["Mitla"]
+dictGrid=[]
 
 def main():
 
+	guiFrame = []
 
-	###### SETUP / WINDOW CREATION 
-	root = tk.Tk()
-	root.title("map maker")
-	root.resizable(0, 0)
-	bgColors = ["grey","lightgrey"]
-	### Make frames and pack to root
-	menuFrame=Frame(root)
-	menuFrame.pack(anchor=W)
-	guiFrame = Frame(root)
-	guiFrame.pack()
-	### Global Vars
-	GRID_SIZE = 20
-	#These Area types will eventually lead to combat modifiers
-	AREA_TYPES = ["plains", "road", "city", "building", "waterfront", "other"] #plains, road, city, building, waterfront
-	REGIONS = ["Mitla"]
+
 
 	###### MAKE TOP MENU
 
@@ -27,7 +31,7 @@ def main():
 	fileButton = Menu(mb0,tearoff=0)
 	fileButton.add_command(label="New", command=main)
 	fileButton.add_command(label="Save", command=lambda: saveFile())
-	fileButton.add_command(label="Load", command=lambda: loadFile())
+	fileButton.add_command(label="Load", command=lambda: loadFile(dictGrid))
 	fileButton.add_command(label="Exit", command=root.destroy)
 
 	mb1 = Menubutton(menuFrame, text="Edit",relief=FLAT)
@@ -38,7 +42,7 @@ def main():
 
 	mb2 = Menubutton(menuFrame, text="Help",relief=FLAT)
 	helpButton = Menu(mb2,tearoff=0)
-	helpButton.add_command(label="Does", command=root.destroy)
+	helpButton.add_command(label="Does", command=lambda: printGrid(dictGrid))
 	helpButton.add_command(label="this", command=root.destroy)
 	helpButton.add_command(label="work??", command=root.destroy)
 
@@ -61,7 +65,6 @@ def main():
 			file.write(str(dictGrid))
 		window.destroy()
 	def saveFile():
-		printGrid(dictGrid)
 		window = Toplevel()
 		window.geometry('300x70')
 		Label(window, text="Save file as?").pack(anchor=W)
@@ -69,26 +72,39 @@ def main():
 		Entry(window, textvariable=fileName).pack()
 		saveButt = Button(window, text="Save", command=lambda window=window, fileName=fileName:completeSave(window, fileName)).pack()
 
-	def loadFile():
-		filename = filedialog.askopenfilename
+	def loadFile(dictGrid):
+		filename = filedialog.askopenfilename(initialdir= ".",
+											title = "Select a File",
+											filetypes = (("Text Files",
+														"*.txt"),
+														("all files",
+														"*.*")))
+		#print(filename)
+		with open(filename, 'r') as file:
+			content = file.read()
+			#convert file contents to python
+			x= json.loads(content.replace('\'', '"'))
+			dictGrid = x
+			GRID_SIZE=len(dictGrid[0]) #changing value of constant- fix this once this is working
+			print("from load function")
+			printGrid(dictGrid)
+			genGrid(root, guiFrame, dictGrid)
+			return dictGrid
+
 
 	def saveArea(vDict,window,btn, x,y):
-		print(btn)
 		btn["text"]=vDict["nv"].get()
-		print(vDict["nv"].get())
 		window.destroy()
 		dictGrid[x][y]["name"] = vDict["nv"].get()
 		dictGrid[x][y]["description"] = vDict["dv"].get()
 		dictGrid[x][y]["type"] = vDict["tv"].get()
 		dictGrid[x][y]["region"] = vDict["rv"].get()
-		printGrid(dictGrid)
 
 	def openArea(btn, x, y):
-		printGrid(dictGrid)
 		window = Toplevel()
 		window.geometry('200x200')
-		if(btn.cget("text")!=""):
-			nameVar = StringVar(root, value=btn.cget("text"))
+		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
+			nameVar = StringVar(root, value=dictGrid[x][y]["name"])
 			descVar = StringVar(root, value=dictGrid[x][y]["description"])
 			typeVar = StringVar(root, value=dictGrid[x][y]["type"])
 			regionVar = StringVar(root, value=dictGrid[x][y]["region"])
@@ -122,23 +138,46 @@ def main():
 	#add logic here to generate underlying python dict which stores all the values as well
 	#don't want to just read through buttons, because they may have other text stored as
 	#well as not store the full information (long descriptions, etc) 
-	
-	dictGrid = []
-	for x in range(1,GRID_SIZE):
-		dictGrid.append([])
-		root.columnconfigure(x, weight=0)
-		for y in range(GRID_SIZE):
-			dictGrid[x-1].append({})
-			btn = tk.Button(guiFrame, height=2,width=10,text="", relief=FLAT, background=bgColors[(x+y)%len(bgColors)])
-			btn.grid(column=y,row=x)
-			btn["command"]=lambda btn=btn, x=x, y=y:openArea(btn, x, y)
-	
-	
-	
+	def genGrid(root, guiFrame, dictGrid):
+		#2 scenarios - dictGrid is empty, just launched - generate
+		#otherwise, dictGrid exists, loading file- need to read what's in it and gen from that
 
-
-
+		if(dictGrid==[]):
+			print("here")
+			guiFrame = Frame(root)
+			guiFrame.pack()
+			for x in range(0,GRID_SIZE+1):
+				dictGrid.append([])
+				root.columnconfigure(x+1, weight=0)
+				for y in range(GRID_SIZE+1):
+					dictGrid[x].append({})
+					btn = tk.Button(guiFrame, height=2,width=10,text="", relief=FLAT, background=bgColors[(x+y)%len(bgColors)])
+					btn.grid(column=y,row=x)
+					btn["command"]=lambda btn=btn, x=x, y=y:openArea(btn, x, y)
+		else:
+			global dictGrid
+			print("there")
+			guiFrame.destroy()
+			guiFrame = Frame(root)
+			guiFrame.pack()
+			for x in range(0, GRID_SIZE+1):
+				root.columnconfigure(x+1, weight=0)
+				for y in range(GRID_SIZE+1):
+					if(dictGrid[x][y]=={}):
+						dictGrid[x][y]["name"]=""
+						dictGrid[x][y]["description"]=""
+						dictGrid[x][y]["type"]=""
+						dictGrid[x][y]["region"]=""
+						
+					btn = tk.Button(guiFrame, height=2,width=10,text=dictGrid[x][y]["name"], relief=FLAT, background=bgColors[(x+y)%len(bgColors)])
+					btn.grid(column=y,row=x)
+					btn["command"]=lambda btn=btn, x=x, y=y:openArea(btn, x, y)
+		printGrid(dictGrid)
 	
+		return guiFrame, dictGrid
+
+	guiFrame, dictGrid = genGrid(root, guiFrame, [])
+	printGrid(dictGrid)
 	root.mainloop()
 
 
