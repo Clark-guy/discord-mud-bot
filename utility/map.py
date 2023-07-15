@@ -1,3 +1,13 @@
+# This whole program would have worked better wrapped in a class
+# I may do that at some point, but for now it has a small enough function that 
+# I will focus on getting it up and running
+# unfortunately this oversight means heavy use of global variables- particularly
+# dictGrid (the dictionary grid, which functions as the underlying model) and
+# guiFrame (the gui on which the frid is built).
+#
+#
+
+
 import tkinter as tk
 import json
 from tkinter import ttk
@@ -13,10 +23,11 @@ bgColors = ["grey","lightgrey"]
 menuFrame=Frame(root)
 menuFrame.pack(anchor=W)
 ### Constants / Global Vars
-GRID_SIZE = 5
+GRID_SIZE = 10
 #These Area types will eventually lead to combat modifiers
+DIRECTIONS = ["NORTH" , "SOUTH" , "EAST" , "WEST"]
 AREA_TYPES = ["plains", "road", "city", "building", "waterfront", "other"] #plains, road, city, building, waterfront
-REGIONS = ["Mitla"]
+REGIONS = ["Other", "Mitla"]
 dictGrid=[]
 
 def main():
@@ -32,6 +43,7 @@ def main():
 	fileButton.add_command(label="New", command=lambda: newMap())
 	fileButton.add_command(label="Save", command=lambda: saveFile())
 	fileButton.add_command(label="Load", command=lambda: loadFile())
+	fileButton.add_command(label="Render", command=lambda: render())
 	fileButton.add_command(label="Exit", command=root.destroy)
 
 	mb1 = Menubutton(menuFrame, text="Edit",relief=FLAT)
@@ -55,6 +67,28 @@ def main():
 
 	
 	###### UTILITY FUNCTIONS
+
+	def render():
+		global dictGrid
+		#first pass: go through dictGrid and grab all entries with a name
+		#second pass: go through dictGrid and find all adjascent locations (LR)
+		#third pass for up & down possibly?
+		for x in dictGrid:
+			for y in x:
+				#this double nest should be fixed at some point
+				if("name" in y):
+					if y['name']!='':
+
+						varName = y['name'].replace(' ','_')
+						print("const " + str(varName) + "= new Area("+str(json.dumps(y)[:-1]) + 
+						", sessionPresent: [], npcPresent: []," + 
+						" north: null," + 
+						" south: null," + 
+						" east: null," + 
+						" west: null" + 
+						"});")
+
+
 	def printGrid(grid):
 		for x in range(len(grid)):
 			print(grid[x])
@@ -69,18 +103,8 @@ def main():
 		guiFrame.pack()
 		genGrid(root)
 
-	def completeSave(window,fileName): 
-		with open(fileName.get() + '.txt', 'w') as file:
-			file.write(str(dictGrid))
-		window.destroy()
 	def saveFile():
 		global dictGrid
-		#window = Toplevel()
-		#window.geometry('300x70')
-		#Label(window, text="Save file as?").pack(anchor=W)
-		#fileName=StringVar()
-		#Entry(window, textvariable=fileName).pack()
-		#saveButt = Button(window, text="Save", command=lambda window=window, fileName=fileName:completeSave(window, fileName)).pack()
 		filename = filedialog.asksaveasfile(mode='w', initialdir= ".", defaultextension='.txt',
 											title = "Select a File",
 											filetypes = (("Text Files",
@@ -89,8 +113,7 @@ def main():
 														"*.*")))
 		if filename is None:
 			return
-		#with open(filename.get() + '.txt', 'w') as file:
-		filename.write(str(dictGrid))
+		filename.write(str(json.dumps(dictGrid)))
 		filename.close()
 
 	def loadFile():
@@ -101,7 +124,7 @@ def main():
 														"*.txt"),
 														("all files",
 														"*.*")))
-		if filename is None or filename is '':
+		if filename is None or filename == '':
 			return
 		#print(filename)
 		with open(filename, 'r') as file:
@@ -109,8 +132,13 @@ def main():
 			#convert file contents to python
 			x= json.loads(content.replace('\'', '"'))
 			dictGrid = x
-			GRID_SIZE=len(dictGrid[0]) #changing value of constant- fix this once this is working
-			print("from load function")
+			global GRID_SIZE
+			GRID_SIZE=len(dictGrid[0])-1 #changing value of constant- fix this once this is working
+			#maybe is just shouldnt be a constant? review..
+			for row in dictGrid:
+				for item in row:
+					if(item!={}):
+						item["directions"] = tuple(item["directions"])
 			printGrid(dictGrid)
 			genGrid(root)
 			return dictGrid
@@ -118,28 +146,43 @@ def main():
 
 
 	def saveArea(vDict,window,btn, x,y):
-		btn["text"]=vDict["nv"].get()
-		window.destroy()
+		name = vDict["nv"].get()
+		dirs = (vDict["db"].curselection())
+		movableDirections="\n"
+		if(0 in dirs):
+			movableDirections+="N "
+		if(1 in dirs):
+			movableDirections+="S "
+		if(2 in dirs):
+			movableDirections+="E "
+		if(3 in dirs):
+			movableDirections+="W"
+		#btn["text"]= "|"+spacers+"\n| " + name + "\n|"+spacers
+		btn["text"]=name+movableDirections
 		dictGrid[x][y]["name"] = vDict["nv"].get()
 		dictGrid[x][y]["description"] = vDict["dv"].get()
 		dictGrid[x][y]["type"] = vDict["tv"].get()
 		dictGrid[x][y]["region"] = vDict["rv"].get()
+		dictGrid[x][y]["directions"] = vDict["db"].curselection()
+		window.destroy()
 
 	def openArea(btn, x, y):
 		global dictGrid
 		window = Toplevel()
-		window.geometry('200x200')
+		window.geometry('200x400')
 		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
 			nameVar = StringVar(root, value=dictGrid[x][y]["name"])
 			descVar = StringVar(root, value=dictGrid[x][y]["description"])
 			typeVar = StringVar(root, value=dictGrid[x][y]["type"])
 			regionVar = StringVar(root, value=dictGrid[x][y]["region"])
+			#directVar = tk.StringVar(root, value=dictGrid[x][y]["directions"])
 		else:
 			nameVar   = tk.StringVar()
 			descVar = tk.StringVar()
 			typeVar = tk.StringVar()
 			regionVar = tk.StringVar()
-			#don't need: sessions present, directions. both will be generated
+			#don't need: sessions present, will be generated
+			#direction is done AFTER widget generation
 
 		varDict = {"nv": nameVar, "dv": descVar, "tv": typeVar, "rv": regionVar}
 		nameLabel = Label(window, text="name").pack(anchor=W)
@@ -150,6 +193,18 @@ def main():
 		typeBox     = ttk.Combobox(window, state='readonly', textvariable=typeVar, values=AREA_TYPES).pack()
 		regionLabel = Label(window, text="region").pack(anchor=W)
 		regionBox   = ttk.Combobox(window, state='readonly', textvariable=regionVar, values=REGIONS).pack()
+		directionLabel = Label(window, text="movableDirections").pack(anchor=W)
+		#print(directVar.get())
+		directionBox = Listbox(window, selectmode="multiple", listvariable=tk.StringVar(value=DIRECTIONS))
+		directionBox.pack()
+		varDict["db"] = directionBox
+
+		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
+			if(dictGrid[x][y]["directions"]!=()):
+				dirs = dictGrid[x][y]["directions"]
+				for direc in dirs:
+					directionBox.activate(direc)
+					directionBox.selection_set(ACTIVE)
 		saveButt    = Button(window, text="Save", command=lambda 
 				window=window, 
 				btn=btn, 
@@ -190,16 +245,29 @@ def main():
 			for x in range(0, GRID_SIZE+1):
 				root.columnconfigure(x+1, weight=0)
 				for y in range(GRID_SIZE+1):
+					movableDirections="\n"
 					if(dictGrid[x][y]=={}):
 						dictGrid[x][y]["name"]=""
 						dictGrid[x][y]["description"]=""
 						dictGrid[x][y]["type"]=""
 						dictGrid[x][y]["region"]=""
-						
-					btn = tk.Button(guiFrame, height=2,width=10,text=dictGrid[x][y]["name"], relief=FLAT, background=bgColors[(x+y)%len(bgColors)])
+						dictGrid[x][y]["directions"]=()
+						dirs=()
+					else:
+						dirs = (dictGrid[x][y]["directions"])
+						if(0 in dirs):
+							movableDirections+="N "
+						if(1 in dirs):
+							movableDirections+="S "
+						if(2 in dirs):
+							movableDirections+="E "
+						if(3 in dirs):
+							movableDirections+="W"
+					btn = tk.Button(guiFrame, height=2,width=10,text=dictGrid[x][y]["name"]+movableDirections, relief=FLAT, background=bgColors[(x+y)%len(bgColors)])
+					#btn["text"]= "|"+spacers+"\n| " + name + "\n|"+spacers
 					btn.grid(column=y,row=x)
 					btn["command"]=lambda btn=btn, x=x, y=y:openArea(btn, x, y)
-		printGrid(dictGrid)
+		#printGrid(dictGrid)
 	
 		#return guiFrame, dictGrid
 
