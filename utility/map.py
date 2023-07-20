@@ -71,22 +71,23 @@ def main():
 	def render():
 		global dictGrid
 		#first pass: go through dictGrid and grab all entries with a name
-		#second pass: go through dictGrid and find all adjascent locations (LR)
-		#third pass for up & down possibly?
-		for x in dictGrid:
-			for y in x:
+		#	generate json for all
+		for row in dictGrid:
+			for area in row:
 				#this double nest should be fixed at some point
-				if("name" in y):
-					if y['name']!='':
-
-						varName = y['name'].replace(' ','_')
-						print("const " + str(varName) + "= new Area("+str(json.dumps(y)[:-1]) + 
+				if("name" in area):
+					if area['name']!='':
+						varName = area['name'].replace(' ','_')
+						print("const " + str(varName) + "= new Area("+str(json.dumps({key: area[key] for key in area if key not in ['directions']})[:-1]) +
 						", sessionPresent: [], npcPresent: []," + 
 						" north: null," + 
 						" south: null," + 
 						" east: null," + 
 						" west: null" + 
 						"});")
+		#second pass: go through dictGrid and find all adjascent locations (LR)
+		#third pass for up & down possibly?
+		
 
 
 	def printGrid(grid):
