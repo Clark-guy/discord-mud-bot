@@ -86,6 +86,20 @@ def main():
 						" west: null" + 
 						"});")
 		#second pass: go through dictGrid and find all adjascent locations (LR)
+		for row in range(len(dictGrid)):
+			for area in range(len(dictGrid[row])):
+				#this double nest should be fixed at some point
+				if("name" in dictGrid[row][area]):
+					if dictGrid[row][area]['name']!='':
+						#go through directions: if E or W, link with next
+						print("yep:" + str(dictGrid[row][area]["directions"][0]))
+						#we have the directions- now just a series of if blocks
+						#e.g. if directions contains 0, link to directly above
+						
+						#something like this..
+						#dictGrid[row][area].north = dictGrid[row-1][area]._id.toString()
+
+						#if(
 		#third pass for up & down possibly?
 		
 

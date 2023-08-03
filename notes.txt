@@ -337,3 +337,7 @@ work on linking parties who are in the same area so I can talk across servers.
 
 
 
+Revisiting this for a thought- also did NOT make functional demo deadline LOL woopsie
+what if I extended the map builder util into a whole world builder? e.g. char builder
+and then quest builder (make segments of a quest- fetch quest, fight dudes, fight boss,
+etc).
