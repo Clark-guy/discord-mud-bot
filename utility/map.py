@@ -92,10 +92,19 @@ def main():
 				if("name" in dictGrid[row][area]):
 					if dictGrid[row][area]['name']!='':
 						#go through directions: if E or W, link with next
-						print("yep:" + str(dictGrid[row][area]["directions"][0]))
+						#print("yep:" + str(dictGrid[row][area]["directions"]))
+						if(0 in dictGrid[row][area]["directions"]):
+							print(dictGrid[row][area]['name'].replace(' ','_') + '.north = ' + dictGrid[row-1][area]['name'].replace(' ','_')+'._id.toString()')
+						if(1 in dictGrid[row][area]["directions"]):
+							print(dictGrid[row][area]['name'].replace(' ','_') + '.south = ' + dictGrid[row+1][area]['name'].replace(' ','_')+'._id.toString()')
+						if(2 in dictGrid[row][area]["directions"]):
+							print(dictGrid[row][area]['name'].replace(' ','_') + '.east = ' + dictGrid[row][area+1]['name'].replace(' ','_')+'._id.toString()')
+						if(3 in dictGrid[row][area]["directions"]):
+							print(dictGrid[row][area]['name'].replace(' ','_') + '.west= ' + dictGrid[row][area-1]['name'].replace(' ','_')+'._id.toString()')
 						#we have the directions- now just a series of if blocks
 						#e.g. if directions contains 0, link to directly above
-						
+						placeName = str(dictGrid[row][area]['name'])
+						#print(placeName)
 						#something like this..
 						#dictGrid[row][area].north = dictGrid[row-1][area]._id.toString()
 
