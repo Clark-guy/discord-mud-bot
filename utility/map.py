@@ -10,6 +10,7 @@
 
 import tkinter as tk
 import json
+#import npc.py
 from tkinter import ttk
 from tkinter import *
 from tkinter import filedialog
@@ -28,6 +29,7 @@ GRID_SIZE = 10
 DIRECTIONS = ["NORTH" , "SOUTH" , "EAST" , "WEST"]
 AREA_TYPES = ["plains", "road", "city", "building", "waterfront", "other"] #plains, road, city, building, waterfront
 REGIONS = ["Other", "Mitla"]
+npcList=[]
 dictGrid=[]
 
 def main():
@@ -48,15 +50,14 @@ def main():
 
 	mb1 = Menubutton(menuFrame, text="Edit",relief=FLAT)
 	editButton = Menu(mb1,tearoff=0)
+	editButton.add_command(label="Edit NPCs", command=lambda: editNpcs(root))
 	editButton.add_command(label="Copy", command=root.destroy)
 	editButton.add_command(label="Paste", command=root.destroy)
 	editButton.add_command(label="Shift", command=root.destroy)
 
 	mb2 = Menubutton(menuFrame, text="Help",relief=FLAT)
 	helpButton = Menu(mb2,tearoff=0)
-	helpButton.add_command(label="Does", command=lambda: printGrid(dictGrid))
-	helpButton.add_command(label="this", command=root.destroy)
-	helpButton.add_command(label="work??", command=root.destroy)
+	helpButton.add_command(label="Debug print console", command=lambda: printGrid(dictGrid))
 
 	mb0["menu"]=fileButton
 	mb1["menu"]=editButton
@@ -137,13 +138,13 @@ def main():
 														"*.*")))
 		if filename is None:
 			return
-		filename.write(str(json.dumps(dictGrid)))
+		filename.write(str(json.dumps({'npcList':npcList, 'dictGrid':dictGrid})))
 		filename.close()
 
 	def loadFile():
 		global dictGrid
 		filename = filedialog.askopenfilename(initialdir= ".",
-											title = "Select a File",
+											title = "Pick a file, yo",
 											filetypes = (("Text Files",
 														"*.txt"),
 														("all files",
@@ -153,9 +154,14 @@ def main():
 		#print(filename)
 		with open(filename, 'r') as file:
 			content = file.read()
+			print(type(content))
 			#convert file contents to python
 			x= json.loads(content.replace('\'', '"'))
-			dictGrid = x
+			#this if is for legacy functionality- realistically this can be removed
+			if 'dictGrid' in x:
+				dictGrid = x['dictGrid']
+			else:
+				dictGrid = x
 			global GRID_SIZE
 			GRID_SIZE=len(dictGrid[0])-1 #changing value of constant- fix this once this is working
 			#maybe is just shouldnt be a constant? review..
@@ -168,6 +174,19 @@ def main():
 			return dictGrid
 			file.close()
 
+	def saveNpc(vDict,window,btn, x,y):
+		#update npcList
+		#do NPCs know where they are, or does the map?
+		#saving an npc should not update
+		name = vDict["nv"].get()
+		dirs = (vDict["db"].curselection())
+		dictGrid[x][y]["name"] = vDict["nv"].get()
+		dictGrid[x][y]["description"] = vDict["dv"].get()
+		dictGrid[x][y]["type"] = vDict["tv"].get()
+		dictGrid[x][y]["region"] = vDict["rv"].get()
+		dictGrid[x][y]["directions"] = vDict["db"].curselection()
+		dictGrid[x][y]["npcs"] = vDict["np"].curselection()
+		window.destroy()
 
 	def saveArea(vDict,window,btn, x,y):
 		name = vDict["nv"].get()
@@ -188,12 +207,53 @@ def main():
 		dictGrid[x][y]["type"] = vDict["tv"].get()
 		dictGrid[x][y]["region"] = vDict["rv"].get()
 		dictGrid[x][y]["directions"] = vDict["db"].curselection()
+		dictGrid[x][y]["npcs"] = vDict["np"].curselection()
 		window.destroy()
+	
+	#pass in index of NPC being used. if -1, new npc
+	def npcWindow(npcIndex, btn, x, y):
+		print(btn)
+		print(x)
+		print(y)
+		#need to get selected item from list
+		global dictGrid
+		global npcList
+		window = Toplevel()
+		window.geometry('200x300')
+		if(npcIndex != -1):
+			nameVar = StringVar(root, value=dictGrid[x][y]["name"])
+			descVar = StringVar(root, value=dictGrid[x][y]["description"])
+			Var = StringVar(root, value=dictGrid[x][y]["type"])
+			regionVar = StringVar(root, value=dictGrid[x][y]["region"])
+			#directVar = tk.StringVar(root, value=dictGrid[x][y]["directions"])
+		else:
+			nameVar   = tk.StringVar()
+			descVar = tk.StringVar()
+			typeVar = tk.StringVar()
+			regionVar = tk.StringVar()
+		varDict = {"nv": nameVar, "dv": descVar, "tv": typeVar, "rv": regionVar}
+		nameLabel = Label(window, text="name").pack(anchor=W)
+		nameBox   = Entry(window, textvariable=nameVar).pack()
+		descLabel = Label(window, text="description").pack(anchor=W)
+		descBox   = Entry(window, textvariable=descVar).pack()
+		typeLabel = Label(window, text="type").pack(anchor=W)
+		typeBox     = ttk.Combobox(window, state='readonly', textvariable=typeVar, values=AREA_TYPES).pack()
+		regionLabel = Label(window, text="region").pack(anchor=W)
+		regionBox   = ttk.Combobox(window, state='readonly', textvariable=regionVar, values=REGIONS).pack()
+
+
+		saveButt    = Button(window, text="Save", command=lambda 
+				window=window, 
+				btn=btn, 
+				x=x,
+				y=y,
+				varDict=varDict:saveArea(varDict,window, btn,x,y)).pack(pady = 15)
 
 	def openArea(btn, x, y):
 		global dictGrid
+		global npcList
 		window = Toplevel()
-		window.geometry('200x400')
+		window.geometry('200x500')
 		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
 			nameVar = StringVar(root, value=dictGrid[x][y]["name"])
 			descVar = StringVar(root, value=dictGrid[x][y]["description"])
@@ -217,24 +277,43 @@ def main():
 		typeBox     = ttk.Combobox(window, state='readonly', textvariable=typeVar, values=AREA_TYPES).pack()
 		regionLabel = Label(window, text="region").pack(anchor=W)
 		regionBox   = ttk.Combobox(window, state='readonly', textvariable=regionVar, values=REGIONS).pack()
+
 		directionLabel = Label(window, text="movableDirections").pack(anchor=W)
-		#print(directVar.get())
 		directionBox = Listbox(window, selectmode="multiple", listvariable=tk.StringVar(value=DIRECTIONS))
 		directionBox.pack()
 		varDict["db"] = directionBox
+		npcLabel = Label(window, text="npcs").pack(anchor=W)
+		npcList.append("jim")
+		npcList.append("bob")
+		for npc in npcList:
+			#these buttons should give a separate menu- options to remove, edit, etc
+			Button(window, text=npc, command=lambda
+					npcIndex=npcList.index(npc),
+					btn=btn,
+					x=x,
+					y=y:npcWindow(npcIndex,btn,x,y)).pack()
 
+		#if button and dirs not empty, fill in upon load
 		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
 			if(dictGrid[x][y]["directions"]!=()):
 				dirs = dictGrid[x][y]["directions"]
 				for direc in dirs:
 					directionBox.activate(direc)
 					directionBox.selection_set(ACTIVE)
+
+
+		npcAdd    = Button(window, text="Add NPC", command=lambda 
+				window=window, 
+				btn=btn, 
+				x=x,
+				y=y,
+				varDict=varDict:npcWindow(-1,btn,x,y)).pack()
 		saveButt    = Button(window, text="Save", command=lambda 
 				window=window, 
 				btn=btn, 
 				x=x,
 				y=y,
-				varDict=varDict:saveArea(varDict,window, btn,x,y)).pack()
+				varDict=varDict:saveArea(varDict,window, btn,x,y)).pack(pady = 15)
 
 
 	#scrollbar = Scrollbar(root, orient='vertical', command=guiFrame.yview)
@@ -250,7 +329,7 @@ def main():
 		global guiFrame
 
 		if(dictGrid==[]):
-			print("here")
+			#print("here")
 			guiFrame = Frame(root)
 			guiFrame.pack()
 			for x in range(0,GRID_SIZE+1):
@@ -262,7 +341,7 @@ def main():
 					btn.grid(column=y,row=x)
 					btn["command"]=lambda btn=btn, x=x, y=y:openArea(btn, x, y)
 		else:
-			print("there")
+			#print("there")
 			guiFrame.destroy()
 			guiFrame = Frame(root)
 			guiFrame.pack()
@@ -276,6 +355,7 @@ def main():
 						dictGrid[x][y]["type"]=""
 						dictGrid[x][y]["region"]=""
 						dictGrid[x][y]["directions"]=()
+						dictGrid[x][y]["npcs"]=()
 						dirs=()
 					else:
 						dirs = (dictGrid[x][y]["directions"])
@@ -294,6 +374,9 @@ def main():
 		#printGrid(dictGrid)
 	
 		#return guiFrame, dictGrid
+	
+	def editNpcs(root):
+		pass
 
 	genGrid(root)
 	printGrid(dictGrid)

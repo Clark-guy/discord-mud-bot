@@ -18,7 +18,7 @@ function generateMap(){
 					
 					//NPCS
 					const buddyHolly = new NPC({
-						name:"Buddy Holly",
+						"name":"Buddy Holly",
 						description:"Buddy Holly is hanging out with Mary Tyler Moore",
 						job: "guitarist",
 						level: 3,
