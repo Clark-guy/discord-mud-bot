@@ -343,3 +343,18 @@ and then quest builder (make segments of a quest- fetch quest, fight dudes, figh
 etc).
 
 Revisiting this again - concept of building the world around Medieval Mecha, tree ents and rock golems controlled by wizards
+Todo next for map tool - decide WHAT variables an NPC needs to hold
+name,
+description,
+class/race?
+queeests?? depending on how i do that (i can add this later honestly)
+hp (current and max)
+job?
+level?
+wanderLimit?
+schedule?? this could be cool down the line- implement a shortest path algorithm for NPCs to get to various
+	parts of the map given a schedule of location IDs. probably hold off for now
+
+
+i think I should make a quest tool, but it should be separate- a tool where you can pick an NPC and have them as the start point
+for a quest, then add as many items for the quest as you want ('nodes' of different types- fetch, speak with, kill, etc)

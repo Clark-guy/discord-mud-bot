@@ -29,6 +29,7 @@ GRID_SIZE = 10
 DIRECTIONS = ["NORTH" , "SOUTH" , "EAST" , "WEST"]
 AREA_TYPES = ["plains", "road", "city", "building", "waterfront", "other"] #plains, road, city, building, waterfront
 REGIONS = ["Other", "Mitla"]
+CLASSES = ["Pirate" , "Mage" , "Normal" , "Mourner", "Burglar"]
 npcList=[]
 dictGrid=[]
 
@@ -174,19 +175,25 @@ def main():
 			return dictGrid
 			file.close()
 
-	def saveNpc(vDict,window,btn, x,y):
+	def saveNpc(npcIndex,vDict,window,btn, x,y):
 		#update npcList
 		#do NPCs know where they are, or does the map?
 		#saving an npc should not update
-		name = vDict["nv"].get()
-		dirs = (vDict["db"].curselection())
-		dictGrid[x][y]["name"] = vDict["nv"].get()
-		dictGrid[x][y]["description"] = vDict["dv"].get()
-		dictGrid[x][y]["type"] = vDict["tv"].get()
-		dictGrid[x][y]["region"] = vDict["rv"].get()
-		dictGrid[x][y]["directions"] = vDict["db"].curselection()
-		dictGrid[x][y]["npcs"] = vDict["np"].curselection()
+		if(npcIndex!=-1):
+			name = vDict["nv"].get()
+			dictGrid[x][y]["npcList"][npcIndex]["name"] = vDict["nv"].get()
+			dictGrid[x][y]["npcList"][npcIndex]["description"] = vDict["dv"].get()
+			dictGrid[x][y]["npcList"][npcIndex]["level"] = vDict["lv"].get()
+			dictGrid[x][y]["npcList"][npcIndex]["hp"] = vDict["hv"].get()
+			dictGrid[x][y]["npcList"][npcIndex]["class"] = vDict["cv"].get()
+		else:
+			dictGrid[x][y]["npcList"].append({"name": vDict["nv"].get(),
+					"description": vDict["dv"].get(),
+					"level": vDict["lv"].get(),
+					"hp": vDict["hv"].get(),
+					"class": "test"})
 		window.destroy()
+		
 
 	def saveArea(vDict,window,btn, x,y):
 		name = vDict["nv"].get()
@@ -207,39 +214,48 @@ def main():
 		dictGrid[x][y]["type"] = vDict["tv"].get()
 		dictGrid[x][y]["region"] = vDict["rv"].get()
 		dictGrid[x][y]["directions"] = vDict["db"].curselection()
-		dictGrid[x][y]["npcs"] = vDict["np"].curselection()
+		#dictGrid[x][y]["npcs"] = vDict["np"].get()
 		window.destroy()
 	
-	#pass in index of NPC being used. if -1, new npc
+	#pass in index of NPC being used. if -1, new npc - from that specific tile, not a huge list
 	def npcWindow(npcIndex, btn, x, y):
+		print(npcIndex)
 		print(btn)
 		print(x)
 		print(y)
 		#need to get selected item from list
 		global dictGrid
-		global npcList
+		#global npcList
 		window = Toplevel()
 		window.geometry('200x300')
 		if(npcIndex != -1):
-			nameVar = StringVar(root, value=dictGrid[x][y]["name"])
-			descVar = StringVar(root, value=dictGrid[x][y]["description"])
-			Var = StringVar(root, value=dictGrid[x][y]["type"])
-			regionVar = StringVar(root, value=dictGrid[x][y]["region"])
-			#directVar = tk.StringVar(root, value=dictGrid[x][y]["directions"])
+			nameVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["name"])
+			descVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["description"])
+			levelVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["level"])
+			hpVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["hp"])
+			classVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["class"])
 		else:
 			nameVar   = tk.StringVar()
 			descVar = tk.StringVar()
-			typeVar = tk.StringVar()
-			regionVar = tk.StringVar()
-		varDict = {"nv": nameVar, "dv": descVar, "tv": typeVar, "rv": regionVar}
+			levelVar = tk.StringVar()
+			hpVar = tk.StringVar()
+			classVar = tk.StringVar()
+		varDict = {"nv": nameVar, "dv": descVar, "lv": levelVar, "hv": hpVar, "cv": classVar}
 		nameLabel = Label(window, text="name").pack(anchor=W)
 		nameBox   = Entry(window, textvariable=nameVar).pack()
 		descLabel = Label(window, text="description").pack(anchor=W)
 		descBox   = Entry(window, textvariable=descVar).pack()
-		typeLabel = Label(window, text="type").pack(anchor=W)
-		typeBox     = ttk.Combobox(window, state='readonly', textvariable=typeVar, values=AREA_TYPES).pack()
-		regionLabel = Label(window, text="region").pack(anchor=W)
-		regionBox   = ttk.Combobox(window, state='readonly', textvariable=regionVar, values=REGIONS).pack()
+		levelLabel = Label(window, text="level").pack(anchor=W)
+		levelBox   = Entry(window, textvariable=levelVar).pack()
+		hpLabel = Label(window, text="hitpoints").pack(anchor=W)
+		hpBox   = Entry(window, textvariable=hpVar).pack()
+		classLabel = Label(window, text="class").pack(anchor=W)
+		classBox   = ttk.Combobox(window, state='readonly', textvariable=classVar, values=CLASSES).pack()
+		#print(dictGrid[x][y]['npcList'][npcIndex])
+		#if("class" in dictGrid[x][y]['npcList'][npcIndex] and dictGrid[x][y]['npcList'][npcIndex]["class"]!=""):
+			#classPick = dictGrid[x][y]['npcList'][npcIndex]["class"]
+			#classBox.activate(classPick)
+		#	classBox.selection_set(ACTIVE)
 
 
 		saveButt    = Button(window, text="Save", command=lambda 
@@ -247,14 +263,15 @@ def main():
 				btn=btn, 
 				x=x,
 				y=y,
-				varDict=varDict:saveArea(varDict,window, btn,x,y)).pack(pady = 15)
+				varDict=varDict:saveNpc(npcIndex,varDict,window, btn,x,y)).pack(pady = 15)
 
 	def openArea(btn, x, y):
 		global dictGrid
 		global npcList
 		window = Toplevel()
 		window.geometry('200x500')
-		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
+		#if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
+		if("name" in dictGrid[x][y]):
 			nameVar = StringVar(root, value=dictGrid[x][y]["name"])
 			descVar = StringVar(root, value=dictGrid[x][y]["description"])
 			typeVar = StringVar(root, value=dictGrid[x][y]["type"])
@@ -283,23 +300,27 @@ def main():
 		directionBox.pack()
 		varDict["db"] = directionBox
 		npcLabel = Label(window, text="npcs").pack(anchor=W)
-		npcList.append("jim")
-		npcList.append("bob")
-		for npc in npcList:
+		if("npcList" not in dictGrid[x][y]):
+			dictGrid[x][y]["npcList"] = []
+			#dictGrid[x][y]["npcList"].append({"name":"jim", "description":"", "class":"","level":"","hp":""})
+		#npcList.append({"name":"bob", "description":"", "class":"","level":"","hp":""})
+
+		for npc in dictGrid[x][y]["npcList"]:
 			#these buttons should give a separate menu- options to remove, edit, etc
-			Button(window, text=npc, command=lambda
-					npcIndex=npcList.index(npc),
+			Button(window, text=npc["name"], command=lambda
+					npcIndex=dictGrid[x][y]["npcList"].index(npc),
 					btn=btn,
 					x=x,
 					y=y:npcWindow(npcIndex,btn,x,y)).pack()
 
 		#if button and dirs not empty, fill in upon load
-		if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
-			if(dictGrid[x][y]["directions"]!=()):
-				dirs = dictGrid[x][y]["directions"]
-				for direc in dirs:
-					directionBox.activate(direc)
-					directionBox.selection_set(ACTIVE)
+		print(dictGrid[x][y])
+		#if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
+		if("directions" in dictGrid[x][y]):
+			dirs = dictGrid[x][y]["directions"]
+			for direc in dirs:
+				directionBox.activate(direc)
+				directionBox.selection_set(ACTIVE)
 
 
 		npcAdd    = Button(window, text="Add NPC", command=lambda 
