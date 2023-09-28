@@ -358,3 +358,5 @@ schedule?? this could be cool down the line- implement a shortest path algorithm
 
 i think I should make a quest tool, but it should be separate- a tool where you can pick an NPC and have them as the start point
 for a quest, then add as many items for the quest as you want ('nodes' of different types- fetch, speak with, kill, etc)
+
+

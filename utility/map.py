@@ -175,10 +175,8 @@ def main():
 			return dictGrid
 			file.close()
 
-	def saveNpc(npcIndex,vDict,window,btn, x,y):
-		#update npcList
-		#do NPCs know where they are, or does the map?
-		#saving an npc should not update
+	def saveNpc(npcIndex,vDict,window,parentWindow,btn,nameButton,x,y):
+		#need to bring parent window along here to push button to
 		if(npcIndex!=-1):
 			name = vDict["nv"].get()
 			dictGrid[x][y]["npcList"][npcIndex]["name"] = vDict["nv"].get()
@@ -186,12 +184,23 @@ def main():
 			dictGrid[x][y]["npcList"][npcIndex]["level"] = vDict["lv"].get()
 			dictGrid[x][y]["npcList"][npcIndex]["hp"] = vDict["hv"].get()
 			dictGrid[x][y]["npcList"][npcIndex]["class"] = vDict["cv"].get()
+			nameButton['text'] = vDict["nv"].get()
 		else:
+			print("adding index" + str(len(dictGrid[x][y]["npcList"])))
 			dictGrid[x][y]["npcList"].append({"name": vDict["nv"].get(),
 					"description": vDict["dv"].get(),
 					"level": vDict["lv"].get(),
 					"hp": vDict["hv"].get(),
 					"class": "test"})
+			npcBtn = Button(parentWindow, text=vDict["nv"].get())
+			npcBtn['command']=lambda \
+					npcIndex=len(dictGrid[x][y]["npcList"])-1, \
+					btn=btn, \
+					npcBtn=npcBtn, \
+					x=x, \
+					y=y:npcWindow(npcIndex,btn,npcBtn,x,y, window)
+			npcBtn.pack()
+			
 		window.destroy()
 		
 
@@ -218,9 +227,14 @@ def main():
 		window.destroy()
 	
 	#pass in index of NPC being used. if -1, new npc - from that specific tile, not a huge list
-	def npcWindow(npcIndex, btn, x, y):
-		print(npcIndex)
-		print(btn)
+	def npcWindow(npcIndex, btn, nameButton, x, y, parentWindow):
+		#if index -1, need to add new button for that character before "add npc" button
+		#otherwise, update relevant button
+		print("button:")
+		print(btn.cget('text'))
+		print("name button:")
+		print(nameButton['text'])
+		#nameButton['text'] = "yo"
 		print(x)
 		print(y)
 		#need to get selected item from list
@@ -260,10 +274,12 @@ def main():
 
 		saveButt    = Button(window, text="Save", command=lambda 
 				window=window, 
+				parentWindow=parentWindow,
 				btn=btn, 
+				nameButton=nameButton,
 				x=x,
 				y=y,
-				varDict=varDict:saveNpc(npcIndex,varDict,window, btn,x,y)).pack(pady = 15)
+				varDict=varDict:saveNpc(npcIndex,varDict,window, parentWindow, btn,nameButton, x,y)).pack(pady = 15)
 
 	def openArea(btn, x, y):
 		global dictGrid
@@ -307,11 +323,14 @@ def main():
 
 		for npc in dictGrid[x][y]["npcList"]:
 			#these buttons should give a separate menu- options to remove, edit, etc
-			Button(window, text=npc["name"], command=lambda
-					npcIndex=dictGrid[x][y]["npcList"].index(npc),
-					btn=btn,
-					x=x,
-					y=y:npcWindow(npcIndex,btn,x,y)).pack()
+			npcBtn = Button(window, text=npc["name"])
+			npcBtn['command']=lambda \
+					npcIndex=dictGrid[x][y]["npcList"].index(npc), \
+					btn=btn, \
+					npcBtn=npcBtn, \
+					x=x, \
+					y=y:npcWindow(npcIndex,btn,npcBtn,x,y, window)
+			npcBtn.pack()
 
 		#if button and dirs not empty, fill in upon load
 		print(dictGrid[x][y])
@@ -323,12 +342,15 @@ def main():
 				directionBox.selection_set(ACTIVE)
 
 
-		npcAdd    = Button(window, text="Add NPC", command=lambda 
-				window=window, 
-				btn=btn, 
-				x=x,
-				y=y,
-				varDict=varDict:npcWindow(-1,btn,x,y)).pack()
+		npcAdd    = Button(window, text="Add NPC")
+		npcAdd['command']=lambda \
+				window=window, \
+				btn=btn, \
+				npcAdd=npcAdd, \
+				x=x, \
+				y=y, \
+				varDict=varDict:npcWindow(-1,btn,npcAdd,x,y, window)
+		npcAdd.pack()
 		saveButt    = Button(window, text="Save", command=lambda 
 				window=window, 
 				btn=btn, 
