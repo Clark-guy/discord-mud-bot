@@ -226,6 +226,23 @@ def main():
 		#dictGrid[x][y]["npcs"] = vDict["np"].get()
 		window.destroy()
 	
+
+	def removeNpcWindow(npcIndex, btn, nameButton, x, y, parentWindow):
+		global dictGrid
+		#global npcList
+		window = Toplevel()
+		window.geometry('200x300')
+		nameLabel = Label(window, text="name").pack(anchor=W)
+
+		acceptButt = Button(window, text="Save", command=lambda 
+				window=window, 
+				parentWindow=parentWindow,
+				btn=btn, 
+				nameButton=nameButton,
+				x=x,
+				y=y,
+				varDict=varDict:saveNpc(npcIndex,varDict,window, parentWindow, btn,nameButton, x,y)).pack(pady = 15)
+
 	#pass in index of NPC being used. if -1, new npc - from that specific tile, not a huge list
 	def npcWindow(npcIndex, btn, nameButton, x, y, parentWindow):
 		#if index -1, need to add new button for that character before "add npc" button
@@ -351,6 +368,16 @@ def main():
 				y=y, \
 				varDict=varDict:npcWindow(-1,btn,npcAdd,x,y, window)
 		npcAdd.pack()
+
+		npcRem = Button(window, text="Remove NPC")
+		npcRem['command']=lambda \
+				window=window, \
+				btn=btn, \
+				x=x, \
+				y=y, \
+				varDict=varDict:removeNpcWindow(-1,btn,x,y, window)
+		npcRem.pack()
+
 		saveButt    = Button(window, text="Save", command=lambda 
 				window=window, 
 				btn=btn, 
