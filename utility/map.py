@@ -52,7 +52,7 @@ def main():
 	mb1 = Menubutton(menuFrame, text="Edit",relief=FLAT)
 	editButton = Menu(mb1,tearoff=0)
 	editButton.add_command(label="Edit NPCs", command=lambda: editNpcs(root))
-	editButton.add_command(label="Copy", command=root.destroy)
+	editButton.add_command(label="Copy", command=lambda: testFunc())
 	editButton.add_command(label="Paste", command=root.destroy)
 	editButton.add_command(label="Shift", command=root.destroy)
 
@@ -70,48 +70,166 @@ def main():
 	
 	###### UTILITY FUNCTIONS
 
+	def testFunc():
+		strin="helo"
+		for x in range(10):
+			strin+="world"
+			print("yo")
+		print(strin)
+
 	def render():
 		global dictGrid
 		#first pass: go through dictGrid and grab all entries with a name
 		#	generate json for all
+		introString = """
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+function generateMap(){
+	Session.deleteMany({});
+	NPC.deleteMany({}).then(function(npcs){
+		Area.deleteMany({}).then(function(areas){
+			MapNode.deleteMany({}).then(function(mapNodes){
+				Map.deleteMany({}).then(function(maps){
+					console.log(npcs);
+					console.log(areas);
+					console.log(mapNodes);
+					console.log(maps);
+"""
+		outroString = """
+				    console.log("\(ski mask voice\) OK!");
+				});
+			});
+		});
+	});
+}
+mongoose.connect(process.env.MongoDBToken);
+const sessionSchema = Schema({
+	guild: String,
+	botEnabled: Boolean,
+	registerSet: [String],
+	conversationContext: String,
+	partyMembers: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
+	partyLocation: { type: Schema.Types.ObjectId, ref: 'MapNode' },
+	partyArea: { type: Schema.Types.ObjectId, ref: 'Area' },
+	currentTurn: { type: Schema.Types.ObjectId, ref: 'Player' },
+	turnQueue: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
+	turnStyle: String,
+});
+const Player = mongoose.model("Player", {
+  name: String,
+  class: String,
+  inventory: [String],
+  won: Number,
+  owner: String
+});
+const npcSchema = Schema({
+	name: String,
+	description: String,
+	job: String,
+	level: Number,
+	maxHP: Number,
+	currentHP: Number
+});
+const gameSchema = Schema({
+	partyLeader: String,
+	partyLocation: { type: Schema.Types.ObjectId, ref: 'MapNode' }
+});
+const mapNodeSchema = Schema({
+  name: String,
+  areas: [{ type: Schema.Types.ObjectId, ref: 'Area' }],
+  north: { type: Schema.Types.ObjectId, ref: 'MapNode' },
+  south: { type: Schema.Types.ObjectId, ref: 'MapNode' },
+  east:  { type: Schema.Types.ObjectId, ref: 'MapNode' },
+  west:  { type: Schema.Types.ObjectId, ref: 'MapNode' }
+});
+const areaSchema = Schema({
+  name: String,
+  description: String,
+  type: String,
+  region: String,
+  sessionsPresent: [{ type: Schema.Types.ObjectId, ref: 'Session' }],
+  npcPresent: [{ type: Schema.Types.ObjectId, ref: 'NPC' }],
+  north: { type: Schema.Types.ObjectId, ref: 'Area' },
+  south: { type: Schema.Types.ObjectId, ref: 'Area' },
+  east:  { type: Schema.Types.ObjectId, ref: 'Area' },
+  west:  { type: Schema.Types.ObjectId, ref: 'Area' },
+});
+const mapSchema = Schema({
+	locations: [{ type: Schema.Types.ObjectId, ref: 'MapNode' }]
+});
+const Session = mongoose.model("Session", sessionSchema);
+const Game = mongoose.model("Game", gameSchema);
+const NPC = mongoose.model('NPC', npcSchema);
+const Area = mongoose.model('Area', areaSchema);
+const MapNode = mongoose.model('MapNode', mapNodeSchema); //huh???
+const Map = mongoose.model("Map", mapSchema);
+generateMap();
+"""
+
+		outString=""
+		locSaves=""
 		for row in dictGrid:
 			for area in row:
 				#this double nest should be fixed at some point
 				if("name" in area):
 					if area['name']!='':
 						varName = area['name'].replace(' ','_')
-						print("const " + str(varName) + "= new Area("+str(json.dumps({key: area[key] for key in area if key not in ['directions']})[:-1]) +
+						outString=(outString+"const " + str(varName) + "= new Area("+str(json.dumps({key: area[key] for key in area if key not in ['directions']})[:-1]) +
 						", sessionPresent: [], npcPresent: []," + 
 						" north: null," + 
 						" south: null," + 
 						" east: null," + 
 						" west: null" + 
-						"});")
+						"});\n\n")
+						locSaves+=(varName+".save();\n")
 		#second pass: go through dictGrid and find all adjascent locations (LR)
 		for row in range(len(dictGrid)):
 			for area in range(len(dictGrid[row])):
-				#this double nest should be fixed at some point
+				#this double nest should be fixed at some point maybe...
 				if("name" in dictGrid[row][area]):
 					if dictGrid[row][area]['name']!='':
 						#go through directions: if E or W, link with next
 						#print("yep:" + str(dictGrid[row][area]["directions"]))
 						if(0 in dictGrid[row][area]["directions"]):
-							print(dictGrid[row][area]['name'].replace(' ','_') + '.north = ' + dictGrid[row-1][area]['name'].replace(' ','_')+'._id.toString()')
+							outString+=(dictGrid[row][area]['name'].replace(' ','_') + '.north = ' + dictGrid[row-1][area]['name'].replace(' ','_')+'._id.toString()')
+							outString+=("\n")
 						if(1 in dictGrid[row][area]["directions"]):
-							print(dictGrid[row][area]['name'].replace(' ','_') + '.south = ' + dictGrid[row+1][area]['name'].replace(' ','_')+'._id.toString()')
+							outString+=(dictGrid[row][area]['name'].replace(' ','_') + '.south = ' + dictGrid[row+1][area]['name'].replace(' ','_')+'._id.toString()')
+							outString+=("\n")
 						if(2 in dictGrid[row][area]["directions"]):
-							print(dictGrid[row][area]['name'].replace(' ','_') + '.east = ' + dictGrid[row][area+1]['name'].replace(' ','_')+'._id.toString()')
+							outString+=(dictGrid[row][area]['name'].replace(' ','_') + '.east = ' + dictGrid[row][area+1]['name'].replace(' ','_')+'._id.toString()')
+							outString+=("\n")
 						if(3 in dictGrid[row][area]["directions"]):
-							print(dictGrid[row][area]['name'].replace(' ','_') + '.west= ' + dictGrid[row][area-1]['name'].replace(' ','_')+'._id.toString()')
+							outString+=(dictGrid[row][area]['name'].replace(' ','_') + '.west= ' + dictGrid[row][area-1]['name'].replace(' ','_')+'._id.toString()')
+							outString+=("\n")
+
 						#we have the directions- now just a series of if blocks
 						#e.g. if directions contains 0, link to directly above
-						placeName = str(dictGrid[row][area]['name'])
+						#placeName = str(dictGrid[row][area]['name'])
 						#print(placeName)
 						#something like this..
 						#dictGrid[row][area].north = dictGrid[row-1][area]._id.toString()
 
 						#if(
 		#third pass for up & down possibly?
+
+		print(introString)
+		print(outString)
+		print(locSaves)
+		print(outroString)
+		fullString = introString+outString+locSaves+outroString
+		
+		filename = filedialog.asksaveasfile(mode='w', initialdir= ".", defaultextension='.txt',
+											title = "Select a File",
+											filetypes = (("javascript",
+														"*.js"),
+														("all files",
+														"*.*")))
+		if filename is None:
+			return
+		filename.write(fullString)
+
+
 		
 
 
