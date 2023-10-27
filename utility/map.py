@@ -3,7 +3,7 @@
 # I will focus on getting it up and running
 # unfortunately this oversight means heavy use of global variables- particularly
 # dictGrid (the dictionary grid, which functions as the underlying model) and
-# guiFrame (the gui on which the frid is built).
+# guiFrame (the gui on which the grid is built).
 #
 #
 
@@ -175,7 +175,7 @@ def main():
 			return dictGrid
 			file.close()
 
-	def saveNpc(npcIndex,vDict,window,parentWindow,btn,nameButton,x,y):
+	def saveNpc(npcIndex,vDict,window,npcBox,parentWindow,btn,nameButton,x,y):
 		#need to bring parent window along here to push button to
 		if(npcIndex!=-1):
 			name = vDict["nv"].get()
@@ -192,13 +192,13 @@ def main():
 					"level": vDict["lv"].get(),
 					"hp": vDict["hv"].get(),
 					"class": "test"})
-			npcBtn = Button(parentWindow, text=vDict["nv"].get())
+			npcBtn = Button(npcBox, text=vDict["nv"].get())
 			npcBtn['command']=lambda \
 					npcIndex=len(dictGrid[x][y]["npcList"])-1, \
 					btn=btn, \
 					npcBtn=npcBtn, \
 					x=x, \
-					y=y:npcWindow(npcIndex,btn,npcBtn,x,y, window)
+					y=y:npcWindow(npcIndex,btn,npcBtn,x,y, window, npcBox)
 			npcBtn.pack()
 			
 		window.destroy()
@@ -227,12 +227,16 @@ def main():
 		window.destroy()
 	
 
-	def removeNpcWindow(npcIndex, btn, nameButton, x, y, parentWindow):
+	def removeNpcWindow(npcIndex, btn, nameButton, x, y, parentWindow, npcBox):
 		global dictGrid
 		#global npcList
 		window = Toplevel()
 		window.geometry('200x300')
+		#get list of NPCs that currently exist
 		nameLabel = Label(window, text="name").pack(anchor=W)
+		nameBox   = ttk.Combobox(window, state='readonly', textvariable=classVar, values=CLASSES).pack()
+		#
+
 
 		acceptButt = Button(window, text="Save", command=lambda 
 				window=window, 
@@ -241,10 +245,10 @@ def main():
 				nameButton=nameButton,
 				x=x,
 				y=y,
-				varDict=varDict:saveNpc(npcIndex,varDict,window, parentWindow, btn,nameButton, x,y)).pack(pady = 15)
+				varDict=varDict:saveNpc(npcIndex,varDict,window,npcBox, parentWindow, btn,nameButton, x,y)).pack(pady = 15)
 
 	#pass in index of NPC being used. if -1, new npc - from that specific tile, not a huge list
-	def npcWindow(npcIndex, btn, nameButton, x, y, parentWindow):
+	def npcWindow(npcIndex, btn, nameButton, x, y, parentWindow, npcBox):
 		#if index -1, need to add new button for that character before "add npc" button
 		#otherwise, update relevant button
 		print("button:")
@@ -296,7 +300,7 @@ def main():
 				nameButton=nameButton,
 				x=x,
 				y=y,
-				varDict=varDict:saveNpc(npcIndex,varDict,window, parentWindow, btn,nameButton, x,y)).pack(pady = 15)
+				varDict=varDict:saveNpc(npcIndex,varDict,window, npcBox,parentWindow, btn,nameButton, x,y)).pack(pady = 15)
 
 	def openArea(btn, x, y):
 		global dictGrid
@@ -327,12 +331,16 @@ def main():
 		typeBox     = ttk.Combobox(window, state='readonly', textvariable=typeVar, values=AREA_TYPES).pack()
 		regionLabel = Label(window, text="region").pack(anchor=W)
 		regionBox   = ttk.Combobox(window, state='readonly', textvariable=regionVar, values=REGIONS).pack()
-
+		#oh how i love the little buppy <3
 		directionLabel = Label(window, text="movableDirections").pack(anchor=W)
 		directionBox = Listbox(window, selectmode="multiple", listvariable=tk.StringVar(value=DIRECTIONS))
 		directionBox.pack()
 		varDict["db"] = directionBox
-		npcLabel = Label(window, text="npcs").pack(anchor=W)
+		npcBox = tk.Frame(window, bg="white")
+		npcBox.pack(anchor=W)
+		npcLabel = Label(npcBox, text="npcs").pack(anchor=W)
+		print("window")
+		print(window)
 		if("npcList" not in dictGrid[x][y]):
 			dictGrid[x][y]["npcList"] = []
 			#dictGrid[x][y]["npcList"].append({"name":"jim", "description":"", "class":"","level":"","hp":""})
@@ -340,7 +348,7 @@ def main():
 
 		for npc in dictGrid[x][y]["npcList"]:
 			#these buttons should give a separate menu- options to remove, edit, etc
-			npcBtn = Button(window, text=npc["name"])
+			npcBtn = Button(npcBox, text=npc["name"])
 			npcBtn['command']=lambda \
 					npcIndex=dictGrid[x][y]["npcList"].index(npc), \
 					btn=btn, \
@@ -362,11 +370,12 @@ def main():
 		npcAdd    = Button(window, text="Add NPC")
 		npcAdd['command']=lambda \
 				window=window, \
+				npcBox=npcBox, \
 				btn=btn, \
 				npcAdd=npcAdd, \
 				x=x, \
 				y=y, \
-				varDict=varDict:npcWindow(-1,btn,npcAdd,x,y, window)
+				varDict=varDict:npcWindow(-1,btn,npcAdd,x,y, window, npcBox)
 		npcAdd.pack()
 
 		npcRem = Button(window, text="Remove NPC")
@@ -375,7 +384,7 @@ def main():
 				btn=btn, \
 				x=x, \
 				y=y, \
-				varDict=varDict:removeNpcWindow(-1,btn,x,y, window)
+				varDict=varDict:removeNpcWindow(-1,btn,npcRem,x,y, window, npcBox)
 		npcRem.pack()
 
 		saveButt    = Button(window, text="Save", command=lambda 
