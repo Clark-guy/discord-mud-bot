@@ -351,10 +351,11 @@ def main():
 			npcBtn = Button(npcBox, text=npc["name"])
 			npcBtn['command']=lambda \
 					npcIndex=dictGrid[x][y]["npcList"].index(npc), \
+					npcBox=npcBox, \
 					btn=btn, \
 					npcBtn=npcBtn, \
 					x=x, \
-					y=y:npcWindow(npcIndex,btn,npcBtn,x,y, window)
+					y=y:npcWindow(npcIndex,btn,npcBtn,x,y, window, npcBox)
 			npcBtn.pack()
 
 		#if button and dirs not empty, fill in upon load
