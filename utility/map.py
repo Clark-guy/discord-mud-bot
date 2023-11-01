@@ -30,7 +30,7 @@ DIRECTIONS = ["NORTH" , "SOUTH" , "EAST" , "WEST"]
 AREA_TYPES = ["plains", "road", "city", "building", "waterfront", "other"] #plains, road, city, building, waterfront
 REGIONS = ["Other", "Mitla"]
 CLASSES = ["Pirate" , "Mage" , "Normal" , "Mourner", "Burglar"]
-npcList=[]
+#npcList=[]
 dictGrid=[]
 
 def main():
@@ -168,14 +168,31 @@ generateMap();
 
 		outString=""
 		locSaves=""
+		npcSaves=""
 		for row in dictGrid:
 			for area in row:
 				#this double nest should be fixed at some point
 				if("name" in area):
 					if area['name']!='':
+						#grab all NPCs in area - make json object from them before making area
+
 						varName = area['name'].replace(' ','_')
-						outString=(outString+"const " + str(varName) + "= new Area("+str(json.dumps({key: area[key] for key in area if key not in ['directions']})[:-1]) +
-						", sessionPresent: [], npcPresent: []," + 
+						if "npcPresent" in area:
+							for npc in area["npcPresent"]:
+								npc["level"] = int(npc["level"])
+								npcSaves+=npc["name"].replace(" ","_") + ".save();\n"
+						else:
+							area["npcPresent"] = []
+						for npc in area["npcPresent"]:
+							print(json.dumps(npc))
+							outString+= "const " + npc["name"].replace(' ','_') + " = new NPC(" + json.dumps(npc)+");\n"
+						print("here we are")
+						print("\n".join(npc["name"] for npc in area["npcPresent"]))
+						print(area["npcPresent"])
+						#area["level"] = int(area["level"])
+						outString=(outString+"const " + str(varName) + "= new Area("+str(json.dumps({key: area[key] for key in area if key not in ['directions', 'npcPresent']})[:-1]) +
+						", sessionPresent: []," + 
+						" npcPresent: [" + str(", ".join(npc["name"].replace(' ','_')+".id.toString()" for npc in area["npcPresent"])) + "]," + 
 						" north: null," + 
 						" south: null," + 
 						" east: null," + 
@@ -213,11 +230,11 @@ generateMap();
 						#if(
 		#third pass for up & down possibly?
 
-		print(introString)
-		print(outString)
-		print(locSaves)
-		print(outroString)
-		fullString = introString+outString+locSaves+outroString
+		#print(introString)
+		#print(outString)
+		#print(locSaves)
+		#print(outroString)
+		fullString = introString+outString+npcSaves+locSaves+outroString
 		
 		filename = filedialog.asksaveasfile(mode='w', initialdir= ".", defaultextension='.txt',
 											title = "Select a File",
@@ -257,7 +274,7 @@ generateMap();
 														"*.*")))
 		if filename is None:
 			return
-		filename.write(str(json.dumps({'npcList':npcList, 'dictGrid':dictGrid})))
+		filename.write(str(json.dumps({'dictGrid':dictGrid})))
 		filename.close()
 
 	def loadFile():
@@ -297,22 +314,22 @@ generateMap();
 		#need to bring parent window along here to push button to
 		if(npcIndex!=-1):
 			name = vDict["nv"].get()
-			dictGrid[x][y]["npcList"][npcIndex]["name"] = vDict["nv"].get()
-			dictGrid[x][y]["npcList"][npcIndex]["description"] = vDict["dv"].get()
-			dictGrid[x][y]["npcList"][npcIndex]["level"] = vDict["lv"].get()
-			dictGrid[x][y]["npcList"][npcIndex]["hp"] = vDict["hv"].get()
-			dictGrid[x][y]["npcList"][npcIndex]["class"] = vDict["cv"].get()
+			dictGrid[x][y]["npcPresent"][npcIndex]["name"] = vDict["nv"].get()
+			dictGrid[x][y]["npcPresent"][npcIndex]["description"] = vDict["dv"].get()
+			dictGrid[x][y]["npcPresent"][npcIndex]["level"] = vDict["lv"].get()
+			dictGrid[x][y]["npcPresent"][npcIndex]["hp"] = vDict["hv"].get()
+			dictGrid[x][y]["npcPresent"][npcIndex]["class"] = vDict["cv"].get()
 			nameButton['text'] = vDict["nv"].get()
 		else:
-			print("adding index" + str(len(dictGrid[x][y]["npcList"])))
-			dictGrid[x][y]["npcList"].append({"name": vDict["nv"].get(),
+			print("adding index" + str(len(dictGrid[x][y]["npcPresent"])))
+			dictGrid[x][y]["npcPresent"].append({"name": vDict["nv"].get(),
 					"description": vDict["dv"].get(),
 					"level": vDict["lv"].get(),
 					"hp": vDict["hv"].get(),
 					"class": "test"})
 			npcBtn = Button(npcBox, text=vDict["nv"].get())
 			npcBtn['command']=lambda \
-					npcIndex=len(dictGrid[x][y]["npcList"])-1, \
+					npcIndex=len(dictGrid[x][y]["npcPresent"])-1, \
 					btn=btn, \
 					npcBtn=npcBtn, \
 					x=x, \
@@ -382,11 +399,11 @@ generateMap();
 		window = Toplevel()
 		window.geometry('200x300')
 		if(npcIndex != -1):
-			nameVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["name"])
-			descVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["description"])
-			levelVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["level"])
-			hpVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["hp"])
-			classVar = StringVar(root, value=dictGrid[x][y]["npcList"][npcIndex]["class"])
+			nameVar = StringVar(root, value=dictGrid[x][y]["npcPresent"][npcIndex]["name"])
+			descVar = StringVar(root, value=dictGrid[x][y]["npcPresent"][npcIndex]["description"])
+			levelVar = StringVar(root, value=dictGrid[x][y]["npcPresent"][npcIndex]["level"])
+			hpVar = StringVar(root, value=dictGrid[x][y]["npcPresent"][npcIndex]["hp"])
+			classVar = StringVar(root, value=dictGrid[x][y]["npcPresent"][npcIndex]["class"])
 		else:
 			nameVar   = tk.StringVar()
 			descVar = tk.StringVar()
@@ -422,7 +439,7 @@ generateMap();
 
 	def openArea(btn, x, y):
 		global dictGrid
-		global npcList
+		#global npcList
 		window = Toplevel()
 		window.geometry('200x500')
 		#if(dictGrid[x][y]!="" and dictGrid[x][y]!={}):
@@ -459,16 +476,16 @@ generateMap();
 		npcLabel = Label(npcBox, text="npcs").pack(anchor=W)
 		print("window")
 		print(window)
-		if("npcList" not in dictGrid[x][y]):
-			dictGrid[x][y]["npcList"] = []
+		if("npcPresent" not in dictGrid[x][y]):
+			dictGrid[x][y]["npcPresent"] = []
 			#dictGrid[x][y]["npcList"].append({"name":"jim", "description":"", "class":"","level":"","hp":""})
 		#npcList.append({"name":"bob", "description":"", "class":"","level":"","hp":""})
 
-		for npc in dictGrid[x][y]["npcList"]:
+		for npc in dictGrid[x][y]["npcPresent"]:
 			#these buttons should give a separate menu- options to remove, edit, etc
 			npcBtn = Button(npcBox, text=npc["name"])
 			npcBtn['command']=lambda \
-					npcIndex=dictGrid[x][y]["npcList"].index(npc), \
+					npcIndex=dictGrid[x][y]["npcPresent"].index(npc), \
 					npcBox=npcBox, \
 					btn=btn, \
 					npcBtn=npcBtn, \

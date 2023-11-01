@@ -350,7 +350,6 @@ function handleInput(message, session){
 		}
 	  }
 	  else if(content.includes("!partyStatus")) {
-	  	console.log("here");
 		if(!session.partyMembers){
 			message.channel.send("Server does not have a party initialized. initialize now?");
 			session.conversationContext = "createParty";
@@ -441,6 +440,13 @@ function handleInput(message, session){
 		});
 	  }
 
+	  else if(content.startsWith("!debug")){
+		console.log("test!");
+		Session.findOne().exec().then(function(session){
+			session.deleteOne();
+		});
+	  }
+
 		//This logic needs to be broken into multiple functions
 	  else if(validCommands.includes(content.split(" ")[0]) && session.partyLocation){
 	    console.log(session.partyLocation);
@@ -450,6 +456,7 @@ function handleInput(message, session){
 		Area.findOne({"_id":session.partyLocation}).exec().then(function(view){
 			if(commandInfo.command == "look" && commandInfo.target == "general"){
 				message.channel.send(view.description);
+				console.log(view)
 				if(view.npcPresent){
 					console.log(view.npcPresent);
 					for(var i=0;i<view.npcPresent.length;i++){
